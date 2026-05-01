@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Agent, MatrixCell, Run, RunStatus, Task, TaskStatus
+from app.utils.time_utils import utc_now_naive
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +147,7 @@ async def synthesize_report(session: AsyncSession, run: Run) -> str:
     logger.info("Synthesizing final report for run %s", run.id)
 
     run.status = RunStatus.synthesizing
-    run.updated_at = datetime.now(timezone.utc)
+    run.updated_at = utc_now_naive()
     await session.flush()
 
     summaries = await collect_task_summaries(session, run.id)
@@ -155,7 +156,7 @@ async def synthesize_report(session: AsyncSession, run: Run) -> str:
 
     run.final_report = report
     run.status = RunStatus.completed
-    run.updated_at = datetime.now(timezone.utc)
+    run.updated_at = utc_now_naive()
     await session.flush()
 
     logger.info("Final report generated for run %s (%d chars)", run.id, len(report))

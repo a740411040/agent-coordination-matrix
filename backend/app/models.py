@@ -1,6 +1,6 @@
 import uuid
 import enum
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import (
     Column,
@@ -16,6 +16,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.db import Base
+from app.utils.time_utils import utc_now_naive
 
 
 def _uuid() -> str:
@@ -23,7 +24,7 @@ def _uuid() -> str:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return utc_now_naive()
 
 
 class RunStatus(str, enum.Enum):

@@ -1,8 +1,9 @@
 import logging
-from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.utils.time_utils import utc_now_naive
 
 from app.agents.base import AgentResult, ModelContext, ToolContext
 from app.agents.critic_agent import review_result
@@ -34,7 +35,7 @@ async def _update_cell_status(session: AsyncSession, run_id: str, task_id: str, 
     cell = result.scalar_one_or_none()
     if cell:
         cell.status = status
-        cell.updated_at = datetime.now(timezone.utc)
+        cell.updated_at = utc_now_naive()
 
 
 async def _execute_agent(task: Task, agent, session: AsyncSession) -> AgentResult:
@@ -94,7 +95,7 @@ async def _verify_task(task: Task, agent_result: AgentResult, session: AsyncSess
 
     if cell:
         cell.logs = verify_logs
-        cell.updated_at = datetime.now(timezone.utc)
+        cell.updated_at = utc_now_naive()
 
     return critic_result.status
 
@@ -196,7 +197,7 @@ async def _mark_run_completed(session: AsyncSession, run: Run, run_id: str):
     has_failure = any(t.status in (TaskStatus.failed, TaskStatus.blocked) for t in tasks)
     if has_failure:
         run.status = RunStatus.failed
-        run.updated_at = datetime.now(timezone.utc)
+        run.updated_at = utc_now_naive()
     else:
         await synthesize_report(session, run)
 

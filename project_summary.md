@@ -4,10 +4,10 @@
 Composite Visual AI Agent Coordination System (复合可视化 AI Agent 协调系统)
 
 ## 版本
-v1.7.0
+v1.8.0
 
 ## 当前阶段
-阶段 21 已完成（部署文档重写：手把手逐步指南 docs/deployment.md）
+阶段 22 已完成（Supabase PostgreSQL timezone-aware datetime 修复）
 
 ---
 
@@ -363,6 +363,15 @@ v1.7.0
 - [x] 常见问题排查 9 项（404、CORS、DATABASE_URL 格式、Supabase 连接失败、API Key、页面空白、冷启动、连接数超限、密码特殊字符）
 - [x] 环境变量速查表（后端 11 项 + 前端 1 项）
 - [x] 部署检查清单 11 项
+
+### 阶段 22：Supabase PostgreSQL timezone-aware datetime 修复 ✅
+- [x] 根因：asyncpg 向 TIMESTAMP WITHOUT TIME ZONE 字段插入 timezone-aware datetime 报错
+- [x] 新增 backend/app/utils/time_utils.py：utc_now_naive() 返回 timezone-naive UTC datetime
+- [x] 修复 models.py：_utcnow() ORM 默认值改为 utc_now_naive()
+- [x] 修复 executor.py：3 处 cell.updated_at / run.updated_at 手动赋值改为 utc_now_naive()
+- [x] 修复 synthesizer.py：2 处 run.updated_at 手动赋值改为 utc_now_naive()
+- [x] 保留 4 处非 DB 用途 datetime.now(timezone.utc) 不变（health_check timestamp、report 时间戳、mock_api timestamp、filename）
+- [x] 测试 22/22 通过
 
 ---
 
