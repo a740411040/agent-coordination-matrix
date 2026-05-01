@@ -17,21 +17,27 @@ interface Props {
 }
 
 function resolveAgentName(agents: Agent[], id: string | null): string {
-  if (!id) return "未分配"
+  if (!id) return "unassigned"
   const a = agents.find((a) => a.id === id)
-  return a ? a.name : id.slice(0, 8)
+  return a ? a.name.replace(/_/g, " ") : id.slice(0, 8)
 }
 
 const RETRYABLE_STATUSES = ["failed", "needs_review"]
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <h4 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-500">{title}</h4>
+      {children}
+    </div>
+  )
+}
 
 export default function TaskDetailPanel({ task, agent, cell, agents, toolCalls, modelCalls, onClose, onTaskUpdated }: Props) {
   const [retrying, setRetrying] = useState(false)
   const [retryError, setRetryError] = useState("")
 
-  const depNames = (task.dependencies || []).map((depId) => {
-    return depId.slice(0, 8)
-  })
-
+  const depNames = (task.dependencies || []).map((depId) => depId.slice(0, 8))
   const canRetry = RETRYABLE_STATUSES.includes(task.status)
 
   const handleRetry = async () => {
@@ -39,9 +45,7 @@ export default function TaskDetailPanel({ task, agent, cell, agents, toolCalls, 
     setRetryError("")
     try {
       const updated = await api.retryTask(task.id)
-      if (onTaskUpdated) {
-        onTaskUpdated(updated)
-      }
+      if (onTaskUpdated) onTaskUpdated(updated)
     } catch (e: unknown) {
       setRetryError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -50,141 +54,151 @@ export default function TaskDetailPanel({ task, agent, cell, agents, toolCalls, 
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[420px] bg-white border-l shadow-lg z-50 flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
-        <h3 className="font-semibold text-sm truncate flex-1 mr-2">{task.title}</h3>
+    <div className="panel-slide">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06]">
+        <div className="flex-1 min-w-0 mr-3">
+          <h3 className="font-bold text-white truncate">{task.title}</h3>
+          <p className="text-xs text-gray-500 font-mono mt-0.5">{task.id.slice(0, 12)}</p>
+        </div>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-700 text-lg leading-none px-1"
+          className="w-8 h-8 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center
+            text-gray-400 hover:text-white hover:bg-white/[0.08] transition-all duration-200"
         >
-          ×
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
-        <section>
-          <div className="text-xs text-gray-500 mb-1">状态</div>
+      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+        {/* Status + Retry */}
+        <div className="flex flex-wrap items-center gap-3">
           <StatusBadge status={task.status} />
-        </section>
+          {task.retry_count > 0 && (
+            <span className="tag">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              {task.retry_count} retries
+            </span>
+          )}
+          {canRetry && (
+            <button onClick={handleRetry} disabled={retrying} className="btn-secondary text-xs">
+              {retrying ? "Retrying..." : "↻ Retry"}
+            </button>
+          )}
+        </div>
+        {retryError && <p className="text-xs text-red-400">{retryError}</p>}
 
-        <section>
-          <div className="text-xs text-gray-500 mb-1">描述</div>
-          <p className="text-gray-700">{task.description || "—"}</p>
-        </section>
+        {/* Basic Info */}
+        <Section title="Description">
+          <p className="text-sm text-gray-300 leading-relaxed">{task.description || "No description"}</p>
+        </Section>
 
-        <section>
-          <div className="text-xs text-gray-500 mb-1">分配 Agent</div>
-          <span className="text-gray-700">{agent ? agent.name : resolveAgentName(agents, task.assigned_agent_id)}</span>
-        </section>
+        <div className="grid grid-cols-2 gap-4">
+          <Section title="Agent">
+            <p className="text-sm text-gray-300">{agent ? agent.name.replace(/_/g, " ") : resolveAgentName(agents, task.assigned_agent_id)}</p>
+          </Section>
+          <Section title="Expected Output">
+            <p className="text-sm text-gray-300">{task.expected_output || "—"}</p>
+          </Section>
+        </div>
 
-        <section>
-          <div className="text-xs text-gray-500 mb-1">期望输出</div>
-          <p className="text-gray-700">{task.expected_output || "—"}</p>
-        </section>
-
-        <section>
-          <div className="text-xs text-gray-500 mb-1">依赖任务</div>
+        <Section title="Dependencies">
           {depNames.length > 0 ? (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5">
               {depNames.map((name, i) => (
-                <span key={i} className="px-2 py-0.5 bg-gray-100 rounded text-xs text-gray-600">
-                  {name}
-                </span>
+                <span key={i} className="tag font-mono">{name}</span>
               ))}
             </div>
           ) : (
-            <span className="text-gray-400">无依赖</span>
+            <p className="text-sm text-gray-600">No dependencies</p>
           )}
-        </section>
+        </Section>
 
-        <section>
-          <div className="text-xs text-gray-500 mb-1">重试次数</div>
-          <div className="flex items-center gap-2">
-            <span className={`font-medium ${task.retry_count > 0 ? "text-orange-600" : "text-gray-700"}`}>
-              {task.retry_count}
-            </span>
-            {canRetry && (
-              <button
-                onClick={handleRetry}
-                disabled={retrying}
-                className="px-3 py-1 text-xs bg-amber-500 text-white rounded hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {retrying ? "重试中..." : "🔄 Retry"}
-              </button>
-            )}
-          </div>
-          {retryError && (
-            <p className="text-xs text-red-600 mt-1">{retryError}</p>
-          )}
-        </section>
+        <div className="divider" />
 
+        {/* Result */}
         {task.result && (
-          <section>
-            <div className="text-xs text-gray-500 mb-1">执行结果</div>
-            <pre className="bg-gray-50 p-3 rounded text-xs text-gray-700 whitespace-pre-wrap break-words">
-              {task.result}
-            </pre>
-          </section>
+          <Section title="Result">
+            <pre className="code-block">{task.result}</pre>
+          </Section>
         )}
 
+        {/* Error */}
         {task.error && (
-          <section>
-            <div className="text-xs text-gray-500 mb-1">错误信息</div>
-            <pre className="bg-red-50 p-3 rounded text-xs text-red-700 whitespace-pre-wrap break-words">
+          <Section title="Error">
+            <pre className="bg-red-500/[0.06] border border-red-500/10 rounded-xl p-4 font-mono text-xs text-red-400 whitespace-pre-wrap break-words">
               {task.error}
             </pre>
-          </section>
+          </Section>
         )}
 
+        {/* Logs */}
         {cell && cell.logs && cell.logs.length > 0 && (
-          <section>
-            <div className="text-xs text-gray-500 mb-1">执行日志</div>
-            <div className="space-y-1">
+          <Section title="Execution Logs">
+            <div className="space-y-1.5">
               {cell.logs.map((log, i) => (
-                <div key={i} className="bg-gray-50 px-3 py-1.5 rounded text-xs">
+                <div key={i} className="flex items-start gap-2 text-xs">
+                  <span className="text-gray-700 font-mono flex-shrink-0">{String(i).padStart(2, "0")}</span>
                   {typeof log === "object" && log !== null ? (
-                    <>
-                      <span className="font-mono text-gray-500">{String((log as Record<string, unknown>).step || "?")}</span>
-                      <span className="mx-1 text-gray-300">→</span>
-                      <span className="text-gray-700">{String((log as Record<string, unknown>).detail || JSON.stringify(log))}</span>
-                    </>
+                    <span className="text-gray-400">
+                      <span className="text-gray-500 font-medium">{String((log as Record<string, unknown>).step || "·")}</span>
+                      <span className="text-gray-700 mx-1">→</span>
+                      {String((log as Record<string, unknown>).detail || JSON.stringify(log))}
+                    </span>
                   ) : (
-                    <span className="text-gray-700">{String(log)}</span>
+                    <span className="text-gray-400">{String(log)}</span>
                   )}
                 </div>
               ))}
             </div>
-          </section>
+          </Section>
         )}
 
+        {/* Model Calls */}
         {modelCalls.length > 0 && (
-          <section>
-            <div className="text-xs text-gray-500 mb-1">模型调用 ({modelCalls.length})</div>
-            <ModelCallList modelCalls={modelCalls} />
-          </section>
+          <>
+            <div className="divider" />
+            <Section title={`Model Calls (${modelCalls.length})`}>
+              <ModelCallList modelCalls={modelCalls} />
+            </Section>
+          </>
         )}
 
+        {/* Tool Calls */}
         {toolCalls.length > 0 && (
-          <section>
-            <div className="text-xs text-gray-500 mb-1">工具调用 ({toolCalls.length})</div>
-            <ToolCallList toolCalls={toolCalls} />
-          </section>
+          <>
+            <div className="divider" />
+            <Section title={`Tool Calls (${toolCalls.length})`}>
+              <ToolCallList toolCalls={toolCalls} />
+            </Section>
+          </>
         )}
 
+        {/* Agent Summary */}
         {cell && cell.summary && (
-          <section>
-            <div className="text-xs text-gray-500 mb-1">Agent 摘要</div>
-            <p className="text-gray-700">{cell.summary}</p>
-          </section>
+          <>
+            <div className="divider" />
+            <Section title="Agent Summary">
+              <p className="text-sm text-gray-300 leading-relaxed">{cell.summary}</p>
+            </Section>
+          </>
         )}
 
-        <section>
-          <div className="text-xs text-gray-500 mb-1">时间</div>
-          <div className="text-gray-600 text-xs space-y-0.5">
-            <div>创建: {new Date(task.created_at).toLocaleString()}</div>
-            <div>更新: {new Date(task.updated_at).toLocaleString()}</div>
+        <div className="divider" />
+
+        {/* Timestamps */}
+        <Section title="Timestamps">
+          <div className="space-y-1 text-xs text-gray-500">
+            <div className="flex items-center gap-2">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              Created: {new Date(task.created_at).toLocaleString()}
+            </div>
+            <div className="flex items-center gap-2">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              Updated: {new Date(task.updated_at).toLocaleString()}
+            </div>
           </div>
-        </section>
+        </Section>
       </div>
     </div>
   )

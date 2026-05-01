@@ -1,36 +1,45 @@
-const TASK_COLORS: Record<string, string> = {
-  pending: "bg-gray-100 text-gray-600",
-  ready: "bg-sky-100 text-sky-700",
-  running: "bg-blue-100 text-blue-700",
-  completed: "bg-green-100 text-green-700",
-  success: "bg-green-100 text-green-700",
-  verifying: "bg-orange-100 text-orange-700",
-  failed: "bg-red-100 text-red-700",
-  blocked: "bg-purple-100 text-purple-700",
-  needs_review: "bg-yellow-100 text-yellow-700",
-  retry: "bg-pink-100 text-pink-700",
-  retrying: "bg-pink-100 text-pink-700",
+const TASK_STYLES: Record<string, { bg: string; text: string; glow: string; label: string }> = {
+  pending:      { bg: "bg-white/[0.06]",      text: "text-gray-400",    glow: "",                 label: "pending" },
+  ready:        { bg: "bg-sky-500/15",         text: "text-sky-400",     glow: "shadow-[0_0_8px_rgba(56,189,248,0.2)]", label: "ready" },
+  running:      { bg: "bg-blue-500/20",        text: "text-blue-400",    glow: "shadow-[0_0_12px_rgba(59,130,246,0.3)]", label: "running" },
+  completed:    { bg: "bg-emerald-500/15",     text: "text-emerald-400", glow: "shadow-[0_0_8px_rgba(16,185,129,0.2)]", label: "completed" },
+  success:      { bg: "bg-emerald-500/15",     text: "text-emerald-400", glow: "shadow-[0_0_8px_rgba(16,185,129,0.2)]", label: "success" },
+  verifying:    { bg: "bg-amber-500/15",       text: "text-amber-400",   glow: "shadow-[0_0_8px_rgba(245,158,11,0.2)]", label: "verifying" },
+  failed:       { bg: "bg-red-500/15",         text: "text-red-400",     glow: "shadow-[0_0_8px_rgba(239,68,68,0.2)]", label: "failed" },
+  blocked:      { bg: "bg-purple-500/15",      text: "text-purple-400",  glow: "shadow-[0_0_8px_rgba(139,92,246,0.2)]", label: "blocked" },
+  needs_review: { bg: "bg-yellow-500/15",      text: "text-yellow-400",  glow: "shadow-[0_0_8px_rgba(234,179,8,0.2)]", label: "needs review" },
+  retry:        { bg: "bg-pink-500/15",        text: "text-pink-400",    glow: "",                 label: "retry" },
+  retrying:     { bg: "bg-pink-500/15",        text: "text-pink-400",    glow: "",                 label: "retrying" },
 }
 
-const RUN_COLORS: Record<string, string> = {
-  pending: "bg-gray-100 text-gray-600",
-  planning: "bg-yellow-100 text-yellow-700",
-  executing: "bg-blue-100 text-blue-700",
-  synthesizing: "bg-purple-100 text-purple-700",
-  completed: "bg-green-100 text-green-700",
-  failed: "bg-red-100 text-red-700",
+const RUN_STYLES: Record<string, { bg: string; text: string; glow: string; label: string }> = {
+  pending:      { bg: "bg-white/[0.06]",       text: "text-gray-400",    glow: "",                 label: "pending" },
+  planning:     { bg: "bg-amber-500/15",        text: "text-amber-400",   glow: "",                 label: "planning" },
+  executing:    { bg: "bg-blue-500/20",         text: "text-blue-400",    glow: "shadow-[0_0_12px_rgba(59,130,246,0.3)]", label: "executing" },
+  synthesizing: { bg: "bg-purple-500/15",       text: "text-purple-400",  glow: "shadow-[0_0_12px_rgba(139,92,246,0.3)]", label: "synthesizing" },
+  completed:    { bg: "bg-emerald-500/15",      text: "text-emerald-400", glow: "shadow-[0_0_12px_rgba(16,185,129,0.3)]", label: "completed" },
+  failed:       { bg: "bg-red-500/15",          text: "text-red-400",     glow: "shadow-[0_0_12px_rgba(239,68,68,0.3)]", label: "failed" },
 }
 
-const LABELS: Record<string, string> = {
-  synthesizing: "报告生成中",
-}
+const SPINNER_STATES = new Set(["running", "executing", "planning", "synthesizing", "verifying"])
 
 export default function StatusBadge({ status, variant = "task" }: { status: string; variant?: "task" | "run" }) {
-  const colors = variant === "run" ? RUN_COLORS : TASK_COLORS
-  const label = LABELS[status] || status
+  const map = variant === "run" ? RUN_STYLES : TASK_STYLES
+  const s = map[status] || TASK_STYLES.pending
+  const showSpinner = SPINNER_STATES.has(status)
+
   return (
-    <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${colors[status] || "bg-gray-100 text-gray-600"}`}>
-      {label}
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap
+        ${s.bg} ${s.text} ${s.glow} backdrop-blur-sm transition-all duration-300`}
+    >
+      {showSpinner && (
+        <span className="relative flex h-2 w-2">
+          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${s.text.replace("text-", "bg-")}`} />
+          <span className={`relative inline-flex rounded-full h-2 w-2 ${s.text.replace("text-", "bg-")}`} />
+        </span>
+      )}
+      {s.label}
     </span>
   )
 }

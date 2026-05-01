@@ -53,7 +53,7 @@ pending → planning → executing → synthesizing → completed
 | 层 | 技术 |
 |---|---|
 | 后端框架 | Python 3.12+, FastAPI 0.115, Uvicorn |
-| ORM / 数据库 | SQLAlchemy 2.0 (async) + aiosqlite (SQLite) |
+| ORM / 数据库 | SQLAlchemy 2.0 (async) + aiosqlite (SQLite 本地) / asyncpg (Supabase PostgreSQL 生产) |
 | 校验 | Pydantic v2, pydantic-settings |
 | HTTP 客户端 | httpx |
 | 前端框架 | React 19, Vite 6, TypeScript 5 |
@@ -160,6 +160,8 @@ futureagent/
 │   ├── nginx.conf
 │   ├── package.json
 │   └── README.md
+├── docs/
+│   └── deployment.md              # 生产部署完整指南
 ├── docker-compose.yml
 ├── .gitignore
 ├── README.md                          # ← 你在这里
@@ -250,7 +252,70 @@ Docker Compose 包含两个服务：
 
 ---
 
-## 9. Demo 使用流程
+## 9. 生产部署
+
+### 部署架构
+
+```
+GitHub → EdgeOne Pages (Frontend) → Backend API → Supabase PostgreSQL
+```
+
+- **Frontend**：Tencent EdgeOne Pages（Vite build → dist）
+- **Backend**：Render / Railway / Fly.io / 腾讯云服务器
+- **Database**：Supabase PostgreSQL（managed）
+
+### Supabase 数据库配置
+
+1. 创建 Supabase 项目 → 进入 Dashboard → 点击 **Connect** 获取连接串
+2. 转换为 SQLAlchemy async 格式（将 `postgresql://` 改为 `postgresql+asyncpg://`）
+3. 设置后端环境变量 `DATABASE_URL`
+
+连接方式：
+| 方式 | 端口 | 说明 |
+|------|------|------|
+| Session Pooler | 5432 | **推荐**，asyncpg 兼容性最好 |
+| Transaction Pooler | 6543 | 默认，有 prepared statement 兼容风险 |
+| Direct Connection | 5432 | 无连接池，适合低流量 |
+
+> Supabase Transaction Pooler 与 asyncpg 可能存在 prepared statement 兼容问题，建议优先使用 Session Pooler 或 Direct Connection。
+
+### 后端部署（Render 为例）
+
+| 配置项 | 值 |
+|--------|-----|
+| Root Directory | `backend` |
+| Build Command | `pip install -r requirements.txt` |
+| Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Environment Variables | `DATABASE_URL`, `CORS_ORIGINS`, `DEFAULT_PROVIDER`, API Keys 等 |
+
+### 前端部署（EdgeOne Pages）
+
+| 配置项 | 值 |
+|--------|-----|
+| Root Directory | `frontend` |
+| Build Command | `npm install && npm run build` |
+| Output Directory | `dist` |
+| Environment Variable | `VITE_API_BASE_URL=https://your-backend-domain.com` |
+
+### CORS 配置
+
+后端 `CORS_ORIGINS` 必须包含前端域名：
+```env
+CORS_ORIGINS=["https://your-project.pages.edgeone.com","http://localhost:5173"]
+```
+
+### 验证步骤
+
+1. 打开 EdgeOne Pages URL
+2. 创建 Run → Start 执行
+3. 查看 Matrix、ToolCall/ModelCall、DAG
+4. 下载 Final Report
+
+完整部署文档见 [docs/deployment.md](docs/deployment.md)。
+
+---
+
+## 10. Demo 使用流程
 
 ### 示例 Goal
 
@@ -339,7 +404,6 @@ Agent 中 `model_name=llama3`。
 
 ## 13. 当前限制
 
-- **SQLite 单文件数据库**：不适合高并发生产环境，可后续迁移 PostgreSQL
 - **BackgroundTasks 执行**：FastAPI BackgroundTasks 在进程内执行，重启会丢失；可后续换 Celery/RQ
 - **CriticAgent 为规则模式**：MVP 审查仅检查字段完整性，未接入 LLM 深度审查
 - **无用户认证**：所有 API 无鉴权，适合内网/本地使用
@@ -350,11 +414,11 @@ Agent 中 `model_name=llama3`。
 
 ---
 
-## 14. 后续路线
+## 15. 后续路线
 
 | 优先级 | 功能 | 说明 |
 |--------|------|------|
-| P0 | PostgreSQL 支持 | 修改 DATABASE_URL 即可切换 |
+| P0 | PostgreSQL 支持 | ✅ 已完成，DATABASE_URL 切换即生效 |
 | P0 | WebSocket/SSE 实时推送 | 替代前端轮询 |
 | P1 | Agent 管理界面 | 前端可视化编辑 Agent 配置 |
 | P1 | 并行任务执行 | 同一层级的无依赖任务可并行 |

@@ -129,17 +129,14 @@ export default function DagView({ tasks, agents, onTaskClick }: Props) {
 
   const resolveAgent = (agentId: string | null) => {
     if (!agentId || !agents) return null
-    return agents.find((a) => a.id === agentId)?.name ?? null
+    return agents.find((a) => a.id === agentId)?.name?.replace(/_/g, " ") ?? null
   }
 
   if (tasks.length === 0) return null
 
   return (
-    <div className="bg-white border rounded-lg">
-      <div className="px-4 py-3 border-b bg-gray-50">
-        <h3 className="font-semibold text-sm">DAG 依赖视图</h3>
-      </div>
-      <div ref={containerRef} className="relative p-6 overflow-x-auto">
+    <div className="glass overflow-hidden">
+      <div ref={containerRef} className="relative p-8 overflow-x-auto">
         {svgSize.width > 0 && (
           <svg
             className="absolute top-0 left-0 pointer-events-none"
@@ -155,8 +152,12 @@ export default function DagView({ tasks, agents, onTaskClick }: Props) {
                 refY="3"
                 orient="auto"
               >
-                <polygon points="0 0, 8 3, 0 6" fill="#94a3b8" />
+                <polygon points="0 0, 8 3, 0 6" fill="rgba(59, 130, 246, 0.5)" />
               </marker>
+              <linearGradient id="edge-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="rgba(59, 130, 246, 0.4)" />
+                <stop offset="100%" stopColor="rgba(6, 182, 212, 0.4)" />
+              </linearGradient>
             </defs>
             {lines.map((line, i) => (
               <line
@@ -165,8 +166,8 @@ export default function DagView({ tasks, agents, onTaskClick }: Props) {
                 y1={line.y1}
                 x2={line.x2}
                 y2={line.y2}
-                stroke="#cbd5e1"
-                strokeWidth={2}
+                stroke="url(#edge-gradient)"
+                strokeWidth={1.5}
                 markerEnd="url(#dag-arrow)"
               />
             ))}
@@ -174,7 +175,7 @@ export default function DagView({ tasks, agents, onTaskClick }: Props) {
         )}
         <div className="space-y-12 relative" style={{ zIndex: 2 }}>
           {levelGroups.map((group) => (
-            <div key={group.level} className="flex justify-center gap-6 flex-wrap">
+            <div key={group.level} className="flex justify-center gap-5 flex-wrap">
               {group.tasks.map((task) => {
                 const agentName = resolveAgent(task.assigned_agent_id)
                 return (
@@ -182,24 +183,25 @@ export default function DagView({ tasks, agents, onTaskClick }: Props) {
                     key={task.id}
                     ref={(el) => setNodeRef(task.id, el)}
                     onClick={() => onTaskClick?.(task)}
-                    className="w-56 p-3 bg-white border rounded-lg shadow-sm cursor-pointer hover:shadow-md hover:border-blue-300 transition-all"
+                    className="w-60 glass glass-hover p-4 cursor-pointer group"
                   >
-                    <div className="text-xs text-gray-400 font-mono truncate mb-1">
+                    <div className="text-[10px] text-gray-600 font-mono truncate mb-1">
                       {task.id.slice(0, 8)}
                     </div>
-                    <div className="text-sm font-medium text-gray-800 truncate mb-1">
+                    <div className="text-sm font-semibold text-gray-200 truncate mb-1 group-hover:text-white transition-colors">
                       {task.title}
                     </div>
                     {agentName && (
-                      <div className="text-xs text-gray-500 truncate mb-2">
+                      <div className="flex items-center gap-1 text-xs text-gray-500 mb-2">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                         {agentName}
                       </div>
                     )}
                     <div className="flex items-center gap-2">
                       <StatusBadge status={task.status} />
                       {task.retry_count > 0 && (
-                        <span className="text-xs text-orange-500">
-                          retry:{task.retry_count}
+                        <span className="text-[10px] text-amber-400">
+                          ↻ {task.retry_count}
                         </span>
                       )}
                     </div>

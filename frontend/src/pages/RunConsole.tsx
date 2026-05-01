@@ -9,6 +9,54 @@ import TaskDetailPanel from "../components/TaskDetailPanel"
 import FinalReport from "../components/FinalReport"
 import DagView from "../components/DagView"
 
+function MetricCard({ label, value, icon, color }: { label: string; value: string | number; icon: React.ReactNode; color: string }) {
+  return (
+    <div className="stat-card group">
+      <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl mb-2 ${color} transition-transform group-hover:scale-110`}>
+        {icon}
+      </div>
+      <div className="text-2xl font-bold text-white">{value}</div>
+      <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">{label}</div>
+    </div>
+  )
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="glass p-12 text-center animate-fade-in">
+      <div className="text-4xl mb-4 opacity-40">
+        <svg className="w-16 h-16 mx-auto text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      </div>
+      <p className="text-gray-500 text-sm">{message}</p>
+    </div>
+  )
+}
+
+function ErrorBanner({ message }: { message: string }) {
+  return (
+    <div className="glass border-red-500/30 bg-red-500/[0.08] p-4 rounded-2xl animate-slide-up">
+      <div className="flex items-center gap-3">
+        <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+        <span className="text-red-300 text-sm">{message}</span>
+      </div>
+    </div>
+  )
+}
+
+function SectionHeader({ title, icon }: { title: string; icon?: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 mb-4">
+      {icon && <span className="text-accent-blue">{icon}</span>}
+      <h3 className="section-title mb-0">{title}</h3>
+      <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
+    </div>
+  )
+}
+
 export default function RunConsole() {
   const [run, setRun] = useState<RunDetail | null>(null)
   const [agents, setAgents] = useState<Agent[]>([])
@@ -22,26 +70,30 @@ export default function RunConsole() {
   const [selectedCell, setSelectedCell] = useState<MatrixCell | null>(null)
   const [selectedToolCalls, setSelectedToolCalls] = useState<ToolCall[]>([])
   const [selectedModelCalls, setSelectedModelCalls] = useState<ModelCall[]>([])
+  const [allToolCalls, setAllToolCalls] = useState<ToolCall[]>([])
+  const [allModelCalls, setAllModelCalls] = useState<ModelCall[]>([])
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const refreshData = useCallback(async (runId: string) => {
     try {
-      const [runData, tasksData, matrixData] = await Promise.all([
+      const [runData, tasksData, matrixData, toolCallsData, modelCallsData] = await Promise.all([
         api.getRun(runId),
         api.getRunTasks(runId),
         api.getMatrix(runId),
+        api.getRunToolCalls(runId),
+        api.getRunModelCalls(runId),
       ])
       setRun(runData)
       setTasks(tasksData)
       setMatrix(matrixData)
+      setAllToolCalls(toolCallsData)
+      setAllModelCalls(modelCallsData)
 
-      if (runData.status === "completed" || runData.status === "failed" || runData.status === "synthesizing") {
-        if (runData.status === "completed" || runData.status === "failed") {
-          setExecuting(false)
-          if (pollRef.current) {
-            clearInterval(pollRef.current)
-            pollRef.current = null
-          }
+      if (runData.status === "completed" || runData.status === "failed") {
+        setExecuting(false)
+        if (pollRef.current) {
+          clearInterval(pollRef.current)
+          pollRef.current = null
         }
       }
     } catch {
@@ -76,12 +128,12 @@ export default function RunConsole() {
       const result = await api.createRun(goal, plannerMode)
       setRun(result)
       setTasks(result.tasks)
-
       const allAgents = await api.listAgents()
       setAgents(allAgents)
-
       const m = await api.getMatrix(result.id)
       setMatrix(m)
+      setAllToolCalls([])
+      setAllModelCalls([])
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -109,12 +161,12 @@ export default function RunConsole() {
     setSelectedCell(cell)
     try {
       if (run) {
-        const [allToolCalls, allModelCalls] = await Promise.all([
+        const [taskToolCalls, taskModelCalls] = await Promise.all([
           api.getRunToolCalls(run.id),
           api.getRunModelCalls(run.id),
         ])
-        setSelectedToolCalls(allToolCalls.filter((tc) => tc.task_id === task.id))
-        setSelectedModelCalls(allModelCalls.filter((mc) => mc.task_id === task.id))
+        setSelectedToolCalls(taskToolCalls.filter((tc) => tc.task_id === task.id))
+        setSelectedModelCalls(taskModelCalls.filter((mc) => mc.task_id === task.id))
       }
     } catch {
       setSelectedToolCalls([])
@@ -146,72 +198,203 @@ export default function RunConsole() {
 
   const displayTasks = tasks.length > 0 ? tasks : (run?.tasks ?? [])
 
+  const completedTasks = displayTasks.filter((t) => t.status === "completed" || t.status === "success").length
+
   return (
-    <div className="space-y-4 relative">
-      <GoalInput onSubmit={handleCreateRun} loading={loading} />
+    <div className="relative z-10">
+      {/* Hero */}
+      <header className="pt-12 pb-8 px-4 sm:px-8 text-center animate-fade-in">
+        <div className="max-w-3xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-blue/10 border border-accent-blue/20 text-accent-blue text-xs font-medium mb-6">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-blue animate-glow-pulse" />
+            v1.0 — Multi-Agent Coordination
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4">
+            <span className="text-gradient-blue">FutureAgent</span>
+          </h1>
+          <p className="text-lg text-gray-400 font-light mb-2">
+            Composite Visual AI Agent Coordination System
+          </p>
+          <p className="text-sm text-gray-500 max-w-xl mx-auto">
+            Visual orchestration for multi-agent, multi-model, multi-tool AI workflows.
+          </p>
+        </div>
+      </header>
 
-      {error && (
-        <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{error}</div>
-      )}
+      <div className="max-w-6xl mx-auto px-4 sm:px-8 pb-16 space-y-8">
+        {/* Goal Input */}
+        <GoalInput onSubmit={handleCreateRun} loading={loading} hasRun={!!run} />
 
-      {run && (
-        <div className="p-4 bg-white border rounded-lg">
-          <div className="flex items-center gap-3 mb-2">
-            <h2 className="text-lg font-semibold">Run</h2>
-            <span className="text-xs text-gray-400 font-mono">{run.id}</span>
-            <StatusBadge status={run.status} variant="run" />
-            {run.status === "executing" && (
-              <span className="text-xs text-blue-500 animate-pulse">执行中...</span>
+        {/* Error */}
+        {error && <ErrorBanner message={error} />}
+
+        {/* Metric Cards */}
+        {run && (
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 animate-slide-up">
+            <MetricCard
+              label="Agents"
+              value={agents.length || matrix?.agents.length || 0}
+              icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+              color="bg-accent-blue/20 text-accent-blue"
+            />
+            <MetricCard
+              label="Tasks"
+              value={displayTasks.length}
+              icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>}
+              color="bg-accent-cyan/20 text-accent-cyan"
+            />
+            <MetricCard
+              label="Tool Calls"
+              value={allToolCalls.length}
+              icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
+              color="bg-accent-green/20 text-accent-green"
+            />
+            <MetricCard
+              label="Model Calls"
+              value={allModelCalls.length}
+              icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
+              color="bg-accent-purple/20 text-accent-purple"
+            />
+            <MetricCard
+              label="Status"
+              value={run.status}
+              icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+              color={run.status === "completed" ? "bg-accent-green/20 text-accent-green" : run.status === "failed" ? "bg-accent-red/20 text-accent-red" : "bg-accent-blue/20 text-accent-blue"}
+            />
+          </div>
+        )}
+
+        {/* Run Info Card */}
+        {run && (
+          <div className="glass p-6 animate-slide-up">
+            <div className="flex flex-wrap items-center gap-4 mb-3">
+              <h2 className="text-lg font-bold text-white">Run</h2>
+              <span className="font-mono text-xs text-gray-500 bg-white/[0.04] px-2 py-1 rounded-md">{run.id}</span>
+              <StatusBadge status={run.status} variant="run" />
+              {run.status === "executing" && (
+                <span className="text-xs text-accent-blue animate-pulse">Executing...</span>
+              )}
+              {run.status === "synthesizing" && (
+                <span className="text-xs text-accent-purple animate-pulse">Generating report...</span>
+              )}
+            </div>
+            <p className="text-gray-300 text-sm leading-relaxed">{run.goal}</p>
+            {run.status === "pending" && (
+              <button onClick={handleStart} disabled={executing} className="btn-primary mt-4">
+                {executing ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Starting...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11v11.78a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" /></svg>
+                    Start Execution
+                  </span>
+                )}
+              </button>
             )}
-            {run.status === "synthesizing" && (
-              <span className="text-xs text-purple-500 animate-pulse">报告生成中...</span>
+            {completedTasks > 0 && displayTasks.length > 0 && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                  <span>Progress</span>
+                  <span>{completedTasks} / {displayTasks.length}</span>
+                </div>
+                <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-accent-blue to-accent-cyan rounded-full transition-all duration-700"
+                    style={{ width: `${(completedTasks / displayTasks.length) * 100}%` }}
+                  />
+                </div>
+              </div>
             )}
           </div>
-          <p className="text-gray-700">{run.goal}</p>
-          {run.status === "pending" && (
-            <button
-              onClick={handleStart}
-              disabled={executing}
-              className="mt-3 px-4 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {executing ? "启动中..." : "▶ Start 执行"}
-            </button>
-          )}
-        </div>
-      )}
+        )}
 
-      {displayTasks.length > 0 && (
-        <TaskList tasks={displayTasks} agents={agents} />
-      )}
+        {/* Empty State */}
+        {!run && !loading && <EmptyState message="Enter a goal above to start an AI-coordinated workflow" />}
 
-      {displayTasks.length > 0 && (
-        <DagView tasks={displayTasks} agents={agents} onTaskClick={handleDagTaskClick} />
-      )}
+        {/* Loading */}
+        {loading && (
+          <div className="glass p-12 text-center animate-fade-in">
+            <div className="inline-flex items-center gap-3 text-gray-400">
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              <span className="text-sm">Creating your run and generating tasks...</span>
+            </div>
+          </div>
+        )}
 
-      {matrix && (
-        <AgentMatrix
-          agents={matrix.agents}
-          tasks={matrix.tasks}
-          cells={matrix.cells}
-          onCellClick={handleCellClick}
-        />
-      )}
+        {/* Task List */}
+        {displayTasks.length > 0 && (
+          <section className="animate-slide-up">
+            <SectionHeader
+              title="Tasks"
+              icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>}
+            />
+            <TaskList tasks={displayTasks} agents={agents} />
+          </section>
+        )}
 
-      {run && run.status === "completed" && run.final_report && (
-        <FinalReport runId={run.id} visible={true} />
-      )}
+        {/* DAG View */}
+        {displayTasks.length > 0 && (
+          <section className="animate-slide-up">
+            <SectionHeader
+              title="DAG Dependency Graph"
+              icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+            />
+            <DagView tasks={displayTasks} agents={agents} onTaskClick={handleDagTaskClick} />
+          </section>
+        )}
 
+        {/* Agent Matrix */}
+        {matrix && (
+          <section className="animate-slide-up">
+            <SectionHeader
+              title="Agent × Task Matrix"
+              icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>}
+            />
+            <AgentMatrix
+              agents={matrix.agents}
+              tasks={matrix.tasks}
+              cells={matrix.cells}
+              onCellClick={handleCellClick}
+            />
+          </section>
+        )}
+
+        {/* Final Report */}
+        {run && run.status === "completed" && run.final_report && (
+          <section className="animate-slide-up">
+            <SectionHeader
+              title="Final Report"
+              icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+            />
+            <FinalReport runId={run.id} visible={true} />
+          </section>
+        )}
+      </div>
+
+      {/* Task Detail Panel */}
       {selectedTask && (
-        <TaskDetailPanel
-          task={selectedTask}
-          agent={selectedAgent}
-          cell={selectedCell}
-          agents={agents}
-          toolCalls={selectedToolCalls}
-          modelCalls={selectedModelCalls}
-          onClose={handleClosePanel}
-          onTaskUpdated={handleTaskUpdated}
-        />
+        <>
+          <div className="panel-overlay" onClick={handleClosePanel} />
+          <TaskDetailPanel
+            task={selectedTask}
+            agent={selectedAgent}
+            cell={selectedCell}
+            agents={agents}
+            toolCalls={selectedToolCalls}
+            modelCalls={selectedModelCalls}
+            onClose={handleClosePanel}
+            onTaskUpdated={handleTaskUpdated}
+          />
+        </>
       )}
     </div>
   )

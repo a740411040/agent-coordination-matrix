@@ -1,4 +1,5 @@
-const BASE = "/api"
+const envBase = import.meta.env.VITE_API_BASE_URL as string | undefined
+const BASE = envBase ? `${envBase.replace(/\/+$/, "")}/api` : "/api"
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
