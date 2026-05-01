@@ -134,10 +134,16 @@ export default function RunConsole() {
       setMatrix(m)
       setAllToolCalls([])
       setAllModelCalls([])
+      setLoading(false)
+
+      setExecuting(true)
+      await api.startRun(result.id)
+      await refreshData(result.id)
+      startPolling(result.id)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : String(e))
-    } finally {
       setLoading(false)
+      setExecuting(false)
     }
   }
 
