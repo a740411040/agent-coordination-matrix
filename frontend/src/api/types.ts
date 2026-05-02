@@ -110,3 +110,17 @@ export interface TaskRetryResponse {
   status: string
   retry_count: number
 }
+
+export interface ProviderStatus {
+  id: string
+  name: string
+  configured: boolean
+  requires_api_key: boolean
+  description: string
+}
+
+export interface ProviderTestResult {
+  provider: string
+  configured: boolean
+  message: string
+}

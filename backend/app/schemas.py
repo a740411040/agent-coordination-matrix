@@ -80,11 +80,22 @@ class AgentRead(BaseModel):
 
 
 class AgentUpdate(BaseModel):
+    agent_type: Optional[str] = None
     model_provider: Optional[str] = None
     model_name: Optional[str] = None
     temperature: Optional[float] = None
     tools: Optional[List[str]] = None
     enabled: Optional[int] = None
+
+
+# ── Provider ──
+
+class ProviderStatus(BaseModel):
+    id: str
+    name: str
+    configured: bool
+    requires_api_key: bool
+    description: str
 
 
 # ── MatrixCell ──

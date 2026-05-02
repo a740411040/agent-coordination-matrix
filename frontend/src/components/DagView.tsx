@@ -48,6 +48,20 @@ interface Line {
   y2: number
 }
 
+const STATUS_BORDER: Record<string, string> = {
+  pending: "border-white/[0.08]",
+  ready: "border-sky-500/40",
+  running: "border-blue-500/50 shadow-[0_0_12px_rgba(59,130,246,0.15)]",
+  executing: "border-blue-500/50 shadow-[0_0_12px_rgba(59,130,246,0.15)]",
+  verifying: "border-amber-500/40",
+  success: "border-emerald-500/40",
+  completed: "border-emerald-500/40",
+  failed: "border-red-500/50 shadow-[0_0_8px_rgba(239,68,68,0.15)]",
+  blocked: "border-purple-500/40",
+  needs_review: "border-yellow-500/50 shadow-[0_0_8px_rgba(234,179,8,0.15)]",
+  retry: "border-pink-500/40",
+}
+
 export default function DagView({ tasks, agents, onTaskClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map())
@@ -178,12 +192,15 @@ export default function DagView({ tasks, agents, onTaskClick }: Props) {
             <div key={group.level} className="flex justify-center gap-5 flex-wrap">
               {group.tasks.map((task) => {
                 const agentName = resolveAgent(task.assigned_agent_id)
+                const borderClass = STATUS_BORDER[task.status] || STATUS_BORDER.pending
+                const isRunning = task.status === "running" || task.status === "executing"
                 return (
                   <div
                     key={task.id}
                     ref={(el) => setNodeRef(task.id, el)}
                     onClick={() => onTaskClick?.(task)}
-                    className="w-60 glass glass-hover p-4 cursor-pointer group"
+                    className={`w-60 glass glass-hover p-4 cursor-pointer group border-l-[3px] ${borderClass}
+                      ${isRunning ? "animate-running-pulse" : ""}`}
                   >
                     <div className="text-[10px] text-gray-600 font-mono truncate mb-1">
                       {task.id.slice(0, 8)}

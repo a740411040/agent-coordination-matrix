@@ -4,10 +4,10 @@
 Composite Visual AI Agent Coordination System (复合可视化 AI Agent 协调系统)
 
 ## 版本
-v1.8.0
+v1.13.0
 
 ## 当前阶段
-阶段 22 已完成（Supabase PostgreSQL timezone-aware datetime 修复）
+阶段 27 已完成（上线前最终检查：修复 CORS 配置、创建 LICENSE、清理 .env.example、前端构建验证通过）
 
 ---
 
@@ -373,11 +373,79 @@ v1.8.0
 - [x] 保留 4 处非 DB 用途 datetime.now(timezone.utc) 不变（health_check timestamp、report 时间戳、mock_api timestamp、filename）
 - [x] 测试 22/22 通过
 
+### 阶段 23：模型与 API 设置能力 ✅
+- [x] 新增 GET /api/providers 接口：返回 4 个 provider 的状态（configured/requires_api_key/description）
+- [x] configured 判断逻辑：mock/rule 永远 true，mimo 根据 MIMO_API_KEY + MIMO_BASE_URL，openai_compatible 根据 OPENAI_API_KEY + OPENAI_BASE_URL
+- [x] 新增 POST /api/providers/{provider_id}/test 接口：测试后端环境变量是否配置完整，不消耗 token
+- [x] 完善 PATCH /api/agents/{agent_id} 接口：支持更新 agent_type、model_provider、model_name、temperature、enabled、tools
+- [x] 安全：不返回任何 API Key 给前端，不让前端直接调用外部 API
+- [x] 新增 backend/app/api/providers.py 路由文件
+- [x] 更新 schemas.py：新增 ProviderStatus、AgentUpdate 增加 agent_type 字段
+- [x] 前端 types.ts 新增 ProviderStatus、ProviderTestResult 类型
+- [x] 前端 client.ts 新增 listProviders、testProvider、updateAgent API 调用
+- [x] 新建 AgentSettings.tsx 组件：ProviderCard（状态指示灯 + Test Connection 按钮）、AgentCard（展开编辑表单：provider 下拉、model 输入、temperature 滑块、tools 多选、enabled 切换）
+- [x] App.tsx 添加 Console / Settings 标签导航（右上角固定定位，玻璃拟态风格）
+- [x] Security Notice 组件说明 API Key 仅在后端配置
+- [x] 后端测试 22/22 通过
+- [x] 前端构建成功（TypeScript 0 错误，CSS 38.34 KB，JS 252.15 KB）
+
+### 阶段 24：Agent/Model Settings 前端 UI 重构 ✅
+- [x] 新建 ProviderStatusBadge.tsx：Provider 状态指示组件（绿色圆点 + Available/Configured/Missing API Key 标签）
+- [x] 新建 ProviderSettingsSummary.tsx：Provider 状态摘要卡片（页面初始状态下展示，含未配置警告）
+- [x] 新建 AgentSettingsPanel.tsx：右侧滑入面板（复用 panel-slide 样式），包含 Provider 状态 + Agent 列表 + 编辑表单
+- [x] AgentRow 组件：手风琴展开/折叠，编辑时显示 agent_type 下拉、provider 下拉、model_name 输入、temperature 滑块、enabled 开关、tools 多选按钮组
+- [x] 未配置 provider 黄色提示："This provider is not configured on backend. Please set environment variables in Render."
+- [x] 保存成功显示 "Updated" 绿色提示，保存失败显示红色错误
+- [x] RunConsole.tsx：Hero 区域新增 "Agent / Model Settings" 按钮（齿轮图标 + btn-secondary 样式）
+- [x] RunConsole.tsx：GoalInput 下方新增 ProviderSettingsSummary 组件（仅在无 run 且非 loading 时显示）
+- [x] RunConsole.tsx：底部新增 AgentSettingsPanel 组件（settingsOpen 状态控制）
+- [x] App.tsx：移除旧 Console/Settings tab 导航，恢复为简洁结构
+- [x] 删除旧 AgentSettings.tsx（已被 3 个新组件替代）
+- [x] 前端构建成功（TypeScript 0 错误，CSS 36.81 KB，JS 251.50 KB）
+
+### 阶段 25：前端 Demo 展示层全面优化 ✅
+- [x] Hero 区域：增加背景装饰光球（hero-orb + animate-float 动画）
+- [x] Hero 区域：新增 4 个亮点标签（highlight-badge）：Multi-Agent Coordination / Multi-Model Routing / Tool Gateway / Visual Audit Trail，每个标签带图标 + 彩色边框
+- [x] Dashboard 指标卡：从 5 列升级为 6 列布局（Agents / Tasks / Completed / Tool Calls / Model Calls / Status），新增 "Completed" 卡片
+- [x] 指标卡样式升级：stat-card-enhanced 顶部径向渐变 hover 效果
+- [x] AgentMatrix：表头增加 Agent 图标、hover 背景变色、选中列高亮、行 hover 效果
+- [x] MatrixCell：running 状态脉冲动画（animate-running-pulse）、failed/needs_review 警示闪烁、hover 放大至 1.08、选中阴影 + 缩放 1.05、底部显示 summary 摘要
+- [x] DagView：节点增加 3px 彩色左侧边框按状态变色（10 种状态映射）、running 节点脉冲动画、hover 效果
+- [x] TaskDetailPanel：Section 组件改用 section-panel 样式（顶部渐变线装饰 + 图标前缀），新增 7 个分区图标（Basic Info / Dependencies / Result / Error / Logs / Tool Calls / Model Calls / Timestamps）
+- [x] FinalReport：文档预览样式优化（渐变图标、13px 正文、1.7 行高、bg-surface-0/40 背景），下载按钮放大图标，空状态友好提示
+- [x] ErrorBanner：智能错误诊断（自动识别 network/cors/500/404 错误并给出修复提示）
+- [x] index.css：新增 stat-card-enhanced / highlight-badge / section-panel / hero-orb / running-cell 等组件类
+- [x] tailwind.config.js：新增 runningPulse / float / scaleIn 三个动画
+- [x] 前端构建成功（TypeScript 0 错误，CSS 43.64 KB，JS 260.77 KB）
+
+### 阶段 26：GitHub README + 文档体系重构 ✅
+- [x] README.md 全面重写（14 项要求）：项目标题、中英文介绍、Demo URL、Highlights 9 项、ASCII Architecture 图、Screenshots 占位、Quick Start（本地+Docker）、Deployment（EdgeOne+Render+Supabase）、Environment Variables（后端 11 项 + 前端 1 项）、Tech Stack、Features 21 项、Self-Hosting 指南、Project Structure、API Endpoints 19 项、Roadmap 11 项、Testing、Security Notice 5 条、License MIT
+- [x] README 顶部 badges：Python / FastAPI / React / Vite / TypeScript / TailwindCSS / MIT License
+- [x] README 顶部导航链接：Frontend Demo / Backend API / Deployment Guide / Architecture
+- [x] docs/architecture.md 新建：系统架构概览、数据模型、Run/Task 状态机、核心组件详解（Planner/Executor/Agent/Model Router/Tool Gateway/Synthesizer）、前端架构（组件层级/状态管理/样式系统）、API 层、数据库 Schema、部署架构、可扩展点
+- [x] docs/demo.md 新建：完整 Demo 流程（5 步）、Demo Goals、Matrix 交互、DAG 交互、Task Detail 7 个分区、Agent Settings 配置、完整示例会话、使用真实 LLM 教程、故障排除表
+- [x] docs/screenshots/ 目录创建（agent-matrix.png / agent-settings.png / final-report.png 占位）
+- [x] backend/README.md 更新：新增 Environment Variables 表、api/ 目录结构、3 个新 API 端点（PATCH agents, GET providers, POST providers test）
+- [x] frontend/README.md 全面重写：Environment Variables、Components 分 3 组（Core 10 + Settings 3 + Page 1）、Styling 文档（9 个 CSS 类 + 5 个动画）、Build 和 API Proxy
+- [x] project_summary.md 更新至 v1.12.0 / 阶段 26
+
+### 阶段 27：上线前最终检查与修复 ✅
+- [x] 前端代码安全检查：无 hardcoded localhost（0 处）、无 API Key 泄露（0 处）、正确使用 VITE_API_BASE_URL
+- [x] 前端 Agent Settings API 调用验证：listAgents / listProviders / updateAgent 均正确
+- [x] 后端 API 端点完整性：health / agents / agents/{id} PATCH / providers / providers/{id}/test / runs / runs/{id}/start / matrix / tasks / tool-calls / model-calls / final-report / download-report
+- [x] 修复 BUG：CORS 配置 hardcoded origins → 改用 settings.cors_origins_list（从环境变量 CORS_ORIGINS 读取）
+- [x] 修复 BUG：.env.example 重复 CORS_ORIGINS 行 → 合并为单行
+- [x] 修复 BUG：config.py CORS_ORIGINS 默认值 → 包含 EdgeOne Pages 域名
+- [x] 创建 LICENSE 文件（MIT License）
+- [x] .gitignore 验证：.env / *.db / node_modules / __pycache__ / dist 均已排除
+- [x] 前端构建成功（TypeScript 0 错误，CSS 43.64 KB，JS 260.77 KB）
+- [x] project_summary.md 更新至 v1.13.0 / 阶段 27
+
 ---
 
 ## 技术栈
 - 后端：Python 3.12+, FastAPI, SQLAlchemy (async), SQLite + aiosqlite (本地) / PostgreSQL + asyncpg (生产 Supabase), Pydantic v2, httpx, python-dotenv
-- 前端：React 19, Vite 6, TypeScript 5, TailwindCSS 3（暗色主题 + 玻璃拟态 + 渐变 + 自定义动画）
+- 前端：React 19, Vite 6, TypeScript 5, TailwindCSS 3（暗色主题 + 玻璃拟态 + 渐变 + 自定义动画 + highlight-badge + hero-orb + running-pulse）
 - 任务执行：FastAPI BackgroundTasks（MVP）
 - 模型路由：Model Router + 4 个 Provider（mock/rule/mimo/openai_compatible）
 - 工具网关：Tool Gateway + 6 种工具（file.read/file.write/markdown.write/python.run/http.request/mock_api.call）
@@ -388,7 +456,7 @@ v1.8.0
 - DAG 可视化：纯 CSS 层级布局 + SVG 箭头（无 React Flow 依赖）
 - 测试：pytest + pytest-asyncio，in-memory SQLite，22 个测试覆盖 Planner/Executor/ModelRouter/ToolGateway
 - 容器化：Docker + Docker Compose + Nginx 反向代理
-- 交付文档：README（15 项内容）、backend/README、frontend/README
+- 交付文档：README（14 项内容）、backend/README、frontend/README、docs/deployment.md、docs/architecture.md、docs/demo.md
 
 ---
 
@@ -396,7 +464,8 @@ v1.8.0
 
 ```
 futureagent/
-├── README.md                      # 项目说明（15 项内容）
+├── README.md                      # 项目说明（14 项内容，GitHub 展示优化）
+├── LICENSE                        # MIT License
 ├── project_summary.md             # 开发进度文档
 ├── .gitignore
 ├── docker-compose.yml             # Docker Compose 编排
@@ -412,7 +481,7 @@ futureagent/
 │   │   │   ├── base.py, data_agent.py, code_agent.py, critic_agent.py, writer_agent.py
 │   │   │   ├── mock_agents.py, planner_agent.py, registry.py
 │   │   ├── api/
-│   │   │   ├── agents.py, runs.py, tasks.py, reports.py, tools.py
+│   │   │   ├── agents.py, runs.py, tasks.py, reports.py, tools.py, providers.py
 │   │   ├── tools/
 │   │   │   ├── gateway.py, file_tools.py, python_runner.py, markdown_tools.py, http_tools.py, mock_api.py
 │   │   ├── orchestration/
@@ -436,11 +505,17 @@ futureagent/
 │   │   │   ├── GoalInput.tsx, TaskList.tsx, AgentMatrix.tsx, MatrixCell.tsx
 │   │   │   ├── TaskDetailPanel.tsx, ToolCallList.tsx, ModelCallList.tsx
 │   │   │   ├── FinalReport.tsx, DagView.tsx, StatusBadge.tsx
+│   │   │   ├── AgentSettingsPanel.tsx, ProviderStatusBadge.tsx, ProviderSettingsSummary.tsx
 │   │   └── pages/RunConsole.tsx
 │   ├── index.html, package.json, vite.config.ts, tsconfig.json
 │   ├── tailwind.config.js, postcss.config.js
 │   ├── Dockerfile, nginx.conf
 │   └── README.md
+├── docs/
+│   ├── deployment.md              # 生产部署手把手指南（~875 行）
+│   ├── architecture.md            # 系统架构详解
+│   ├── demo.md                    # Demo 演示流程指南
+│   └── screenshots/               # 截图占位目录
 ```
 
 ---

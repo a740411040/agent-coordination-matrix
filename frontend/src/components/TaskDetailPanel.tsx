@@ -24,10 +24,13 @@ function resolveAgentName(agents: Agent[], id: string | null): string {
 
 const RETRYABLE_STATUSES = ["failed", "needs_review"]
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="space-y-2">
-      <h4 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-500">{title}</h4>
+    <div className="section-panel p-4">
+      <h4 className="text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-500 mb-2 flex items-center gap-1.5">
+        {icon}
+        {title}
+      </h4>
       {children}
     </div>
   )
@@ -70,7 +73,7 @@ export default function TaskDetailPanel({ task, agent, cell, agents, toolCalls, 
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
         {/* Status + Retry */}
         <div className="flex flex-wrap items-center gap-3">
           <StatusBadge status={task.status} />
@@ -89,20 +92,22 @@ export default function TaskDetailPanel({ task, agent, cell, agents, toolCalls, 
         {retryError && <p className="text-xs text-red-400">{retryError}</p>}
 
         {/* Basic Info */}
-        <Section title="Description">
-          <p className="text-sm text-gray-300 leading-relaxed">{task.description || "No description"}</p>
+        <Section title="Basic Info" icon={<svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
+          <p className="text-sm text-gray-300 leading-relaxed mb-2">{task.description || "No description"}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <span className="text-[10px] text-gray-600 uppercase tracking-wider">Agent</span>
+              <p className="text-sm text-gray-300">{agent ? agent.name.replace(/_/g, " ") : resolveAgentName(agents, task.assigned_agent_id)}</p>
+            </div>
+            <div>
+              <span className="text-[10px] text-gray-600 uppercase tracking-wider">Expected Output</span>
+              <p className="text-sm text-gray-300">{task.expected_output || "—"}</p>
+            </div>
+          </div>
         </Section>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Section title="Agent">
-            <p className="text-sm text-gray-300">{agent ? agent.name.replace(/_/g, " ") : resolveAgentName(agents, task.assigned_agent_id)}</p>
-          </Section>
-          <Section title="Expected Output">
-            <p className="text-sm text-gray-300">{task.expected_output || "—"}</p>
-          </Section>
-        </div>
-
-        <Section title="Dependencies">
+        {/* Dependencies */}
+        <Section title="Dependencies" icon={<svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>}>
           {depNames.length > 0 ? (
             <div className="flex flex-wrap gap-1.5">
               {depNames.map((name, i) => (
@@ -110,22 +115,20 @@ export default function TaskDetailPanel({ task, agent, cell, agents, toolCalls, 
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-600">No dependencies</p>
+            <p className="text-sm text-gray-600">No dependencies — root task</p>
           )}
         </Section>
 
-        <div className="divider" />
-
         {/* Result */}
         {task.result && (
-          <Section title="Result">
+          <Section title="Result" icon={<svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
             <pre className="code-block">{task.result}</pre>
           </Section>
         )}
 
         {/* Error */}
         {task.error && (
-          <Section title="Error">
+          <Section title="Error" icon={<svg className="w-3 h-3 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
             <pre className="bg-red-500/[0.06] border border-red-500/10 rounded-xl p-4 font-mono text-xs text-red-400 whitespace-pre-wrap break-words">
               {task.error}
             </pre>
@@ -134,7 +137,7 @@ export default function TaskDetailPanel({ task, agent, cell, agents, toolCalls, 
 
         {/* Logs */}
         {cell && cell.logs && cell.logs.length > 0 && (
-          <Section title="Execution Logs">
+          <Section title="Execution Logs" icon={<svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>}>
             <div className="space-y-1.5">
               {cell.logs.map((log, i) => (
                 <div key={i} className="flex items-start gap-2 text-xs">
@@ -154,40 +157,29 @@ export default function TaskDetailPanel({ task, agent, cell, agents, toolCalls, 
           </Section>
         )}
 
-        {/* Model Calls */}
-        {modelCalls.length > 0 && (
-          <>
-            <div className="divider" />
-            <Section title={`Model Calls (${modelCalls.length})`}>
-              <ModelCallList modelCalls={modelCalls} />
-            </Section>
-          </>
-        )}
-
         {/* Tool Calls */}
         {toolCalls.length > 0 && (
-          <>
-            <div className="divider" />
-            <Section title={`Tool Calls (${toolCalls.length})`}>
-              <ToolCallList toolCalls={toolCalls} />
-            </Section>
-          </>
+          <Section title={`Tool Calls (${toolCalls.length})`} icon={<svg className="w-3 h-3 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}>
+            <ToolCallList toolCalls={toolCalls} />
+          </Section>
+        )}
+
+        {/* Model Calls */}
+        {modelCalls.length > 0 && (
+          <Section title={`Model Calls (${modelCalls.length})`} icon={<svg className="w-3 h-3 text-accent-purple" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}>
+            <ModelCallList modelCalls={modelCalls} />
+          </Section>
         )}
 
         {/* Agent Summary */}
         {cell && cell.summary && (
-          <>
-            <div className="divider" />
-            <Section title="Agent Summary">
-              <p className="text-sm text-gray-300 leading-relaxed">{cell.summary}</p>
-            </Section>
-          </>
+          <Section title="Agent Summary" icon={<svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}>
+            <p className="text-sm text-gray-300 leading-relaxed">{cell.summary}</p>
+          </Section>
         )}
 
-        <div className="divider" />
-
         {/* Timestamps */}
-        <Section title="Timestamps">
+        <Section title="Timestamps" icon={<svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
           <div className="space-y-1 text-xs text-gray-500">
             <div className="flex items-center gap-2">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>

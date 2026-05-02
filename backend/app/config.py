@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     DEFAULT_PROVIDER: str = "mock"
     DEFAULT_MODEL: str = "default"
 
-    CORS_ORIGINS: str = '["http://localhost:5173","http://localhost:3000"]'
+    CORS_ORIGINS: str = '["http://localhost:5173","http://localhost:3000","https://futureagent-c0ab4cnu.edgeone.cool"]'
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

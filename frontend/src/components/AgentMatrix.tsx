@@ -41,48 +41,57 @@ export default function AgentMatrix({ agents, tasks, cells, onCellClick, selecte
           <thead>
             <tr>
               <th className="sticky left-0 z-10 bg-surface-2/90 backdrop-blur-sm px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 border-b border-white/[0.06] min-w-[120px]">
-                Agent
+                <span className="flex items-center gap-1.5">
+                  <svg className="w-3 h-3 text-accent-blue/60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  Agent
+                </span>
               </th>
-              {tasks.map((t, i) => (
-                <th
-                  key={t.id}
-                  className={`px-3 py-3 text-center text-xs font-semibold border-b border-white/[0.06] min-w-[90px]
-                    ${selectedTaskId === t.id ? "bg-accent-blue/10 text-accent-blue" : "bg-surface-2/90 text-gray-500"}
-                    transition-colors duration-200`}
-                  title={t.title}
-                >
-                  <div className="flex flex-col items-center gap-0.5">
-                    <span className="text-[10px] opacity-60">T{i + 1}</span>
-                    <span className="truncate max-w-[80px]">{t.title?.slice(0, 12)}</span>
-                  </div>
-                </th>
-              ))}
+              {tasks.map((t, i) => {
+                const isSelected = selectedTaskId === t.id
+                return (
+                  <th
+                    key={t.id}
+                    className={`px-3 py-3 text-center text-xs font-semibold border-b border-white/[0.06] min-w-[90px] transition-colors duration-200
+                      ${isSelected ? "bg-accent-blue/15 text-accent-blue" : "bg-surface-2/90 text-gray-500 hover:bg-surface-3/60"}`}
+                    title={t.title}
+                  >
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="text-[10px] opacity-60">T{i + 1}</span>
+                      <span className="truncate max-w-[80px]">{t.title?.slice(0, 12)}</span>
+                    </div>
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody>
-            {agents.map((agent) => (
-              <tr key={agent.id} className="group">
-                <td className={`sticky left-0 z-10 backdrop-blur-sm px-4 py-1.5 border-b border-white/[0.04] whitespace-nowrap
-                  ${selectedAgentId === agent.id ? "bg-accent-blue/10" : "bg-surface-1/90 group-hover:bg-surface-2/90"}
-                  transition-colors duration-200`}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-accent-blue/40" />
-                    <span className="text-xs font-medium text-gray-300">{shortName(agent.name)}</span>
-                  </div>
-                </td>
-                {tasks.map((task) => {
-                  const cell = cellMap.get(`${task.id}:${agent.id}`) || null
-                  return (
-                    <MatrixCellView
-                      key={task.id}
-                      cell={cell}
-                      onClick={() => onCellClick(task, agent, cell)}
-                      selected={selectedTaskId === task.id && selectedAgentId === agent.id}
-                    />
-                  )
-                })}
-              </tr>
-            ))}
+            {agents.map((agent) => {
+              const isAgentSelected = selectedAgentId === agent.id
+              return (
+                <tr key={agent.id} className="group hover:bg-white/[0.02] transition-colors">
+                  <td className={`sticky left-0 z-10 backdrop-blur-sm px-4 py-2 border-b border-white/[0.04] whitespace-nowrap transition-colors duration-200
+                    ${isAgentSelected ? "bg-accent-blue/10" : "bg-surface-1/90 group-hover:bg-surface-2/90"}`}>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full transition-colors ${isAgentSelected ? "bg-accent-blue" : "bg-accent-blue/40 group-hover:bg-accent-blue/60"}`} />
+                      <span className={`text-xs font-medium transition-colors ${isAgentSelected ? "text-accent-blue" : "text-gray-300 group-hover:text-gray-200"}`}>
+                        {shortName(agent.name)}
+                      </span>
+                    </div>
+                  </td>
+                  {tasks.map((task) => {
+                    const cell = cellMap.get(`${task.id}:${agent.id}`) || null
+                    return (
+                      <MatrixCellView
+                        key={task.id}
+                        cell={cell}
+                        onClick={() => onCellClick(task, agent, cell)}
+                        selected={selectedTaskId === task.id && selectedAgentId === agent.id}
+                      />
+                    )
+                  })}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

@@ -8,10 +8,12 @@ import StatusBadge from "../components/StatusBadge"
 import TaskDetailPanel from "../components/TaskDetailPanel"
 import FinalReport from "../components/FinalReport"
 import DagView from "../components/DagView"
+import ProviderSettingsSummary from "../components/ProviderSettingsSummary"
+import AgentSettingsPanel from "../components/AgentSettingsPanel"
 
 function MetricCard({ label, value, icon, color }: { label: string; value: string | number; icon: React.ReactNode; color: string }) {
   return (
-    <div className="stat-card group">
+    <div className="stat-card-enhanced group">
       <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl mb-2 ${color} transition-transform group-hover:scale-110`}>
         {icon}
       </div>
@@ -35,13 +37,30 @@ function EmptyState({ message }: { message: string }) {
 }
 
 function ErrorBanner({ message }: { message: string }) {
+  const lower = message.toLowerCase()
+  let hint = ""
+  if (lower.includes("fetch") || lower.includes("network") || lower.includes("failed to fetch") || lower.includes("econnrefused")) {
+    hint = "The backend may be offline or sleeping. Check that the server is running and VITE_API_BASE_URL points to it."
+  } else if (lower.includes("cors") || lower.includes("access-control")) {
+    hint = "CORS error — add your frontend domain to the CORS_ORIGINS environment variable on the backend."
+  } else if (lower.includes("500") || lower.includes("internal server error")) {
+    hint = "The backend returned an error. Check the server logs for details."
+  } else if (lower.includes("404")) {
+    hint = "API endpoint not found. Ensure the backend version matches the frontend."
+  }
+
   return (
     <div className="glass border-red-500/30 bg-red-500/[0.08] p-4 rounded-2xl animate-slide-up">
-      <div className="flex items-center gap-3">
-        <svg className="w-5 h-5 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="flex items-start gap-3">
+        <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
         </svg>
-        <span className="text-red-300 text-sm">{message}</span>
+        <div className="flex-1">
+          <span className="text-red-300 text-sm block">{message}</span>
+          {hint && (
+            <p className="text-xs text-red-400/60 mt-1.5 leading-relaxed">{hint}</p>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -72,6 +91,7 @@ export default function RunConsole() {
   const [selectedModelCalls, setSelectedModelCalls] = useState<ModelCall[]>([])
   const [allToolCalls, setAllToolCalls] = useState<ToolCall[]>([])
   const [allModelCalls, setAllModelCalls] = useState<ModelCall[]>([])
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const refreshData = useCallback(async (runId: string) => {
@@ -209,8 +229,10 @@ export default function RunConsole() {
   return (
     <div className="relative z-10">
       {/* Hero */}
-      <header className="pt-12 pb-8 px-4 sm:px-8 text-center animate-fade-in">
-        <div className="max-w-3xl mx-auto">
+      <header className="relative pt-12 pb-8 px-4 sm:px-8 text-center animate-fade-in overflow-hidden">
+        <div className="hero-orb w-64 h-64 -top-32 left-1/2 -translate-x-1/2 bg-accent-blue/10" />
+        <div className="hero-orb w-48 h-48 -bottom-24 left-1/4 bg-accent-purple/8 animate-float" />
+        <div className="relative max-w-3xl mx-auto">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-blue/10 border border-accent-blue/20 text-accent-blue text-xs font-medium mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-accent-blue animate-glow-pulse" />
             v1.0 — Multi-Agent Coordination
@@ -221,9 +243,39 @@ export default function RunConsole() {
           <p className="text-lg text-gray-400 font-light mb-2">
             Composite Visual AI Agent Coordination System
           </p>
-          <p className="text-sm text-gray-500 max-w-xl mx-auto">
+          <p className="text-sm text-gray-500 max-w-xl mx-auto mb-5">
             Visual orchestration for multi-agent, multi-model, multi-tool AI workflows.
           </p>
+
+          <div className="flex flex-wrap justify-center gap-2 mb-6">
+            <span className="highlight-badge bg-accent-blue/10 border-accent-blue/20 text-accent-blue">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Multi-Agent Coordination
+            </span>
+            <span className="highlight-badge bg-accent-purple/10 border-accent-purple/20 text-accent-purple">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+              Multi-Model Routing
+            </span>
+            <span className="highlight-badge bg-accent-green/10 border-accent-green/20 text-accent-green">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Tool Gateway
+            </span>
+            <span className="highlight-badge bg-accent-amber/10 border-accent-amber/20 text-accent-amber">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              Visual Audit Trail
+            </span>
+          </div>
+
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="btn-secondary text-xs inline-flex items-center gap-2"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Agent / Model Settings
+          </button>
         </div>
       </header>
 
@@ -231,12 +283,15 @@ export default function RunConsole() {
         {/* Goal Input */}
         <GoalInput onSubmit={handleCreateRun} loading={loading} hasRun={!!run} />
 
+        {/* Provider Status Summary */}
+        {!run && !loading && <ProviderSettingsSummary />}
+
         {/* Error */}
         {error && <ErrorBanner message={error} />}
 
         {/* Metric Cards */}
         {run && (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 animate-slide-up">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 animate-slide-up">
             <MetricCard
               label="Agents"
               value={agents.length || matrix?.agents.length || 0}
@@ -248,6 +303,12 @@ export default function RunConsole() {
               value={displayTasks.length}
               icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>}
               color="bg-accent-cyan/20 text-accent-cyan"
+            />
+            <MetricCard
+              label="Completed"
+              value={completedTasks}
+              icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+              color="bg-accent-green/20 text-accent-green"
             />
             <MetricCard
               label="Tool Calls"
@@ -402,6 +463,9 @@ export default function RunConsole() {
           />
         </>
       )}
+
+      {/* Agent Settings Panel */}
+      <AgentSettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   )
 }

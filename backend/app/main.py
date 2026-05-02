@@ -13,6 +13,7 @@ from app.api.runs import router as runs_router
 from app.api.tasks import router as tasks_router
 from app.api.tools import router as tools_router
 from app.api.reports import router as reports_router
+from app.api.providers import router as providers_router
 
 
 DEFAULT_AGENTS = [
@@ -91,13 +92,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://futureagent-c0ab4cnu.edgeone.cool",
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -108,6 +103,7 @@ app.include_router(runs_router)
 app.include_router(tasks_router)
 app.include_router(tools_router)
 app.include_router(reports_router)
+app.include_router(providers_router)
 
 
 @app.get("/api/health")

@@ -1,6 +1,6 @@
 # FutureAgent Backend
 
-Composite Visual AI Agent Coordination System - Backend API
+Composite Visual AI Agent Coordination System — Backend API
 
 ## Quick Start
 
@@ -25,6 +25,21 @@ python -m pytest tests/ -v
 docker compose up --build -d
 ```
 
+## Environment Variables
+
+See `backend/.env.example` for the full list. Key variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `sqlite+aiosqlite:///./data/futureagent.db` | Database connection string |
+| `CORS_ORIGINS` | `["http://localhost:5173"]` | Allowed CORS origins (JSON array) |
+| `DEFAULT_PROVIDER` | `mock` | Default model provider |
+| `DEFAULT_MODEL` | `default` | Default model name |
+| `OPENAI_API_KEY` | — | OpenAI-compatible API key |
+| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | OpenAI-compatible base URL |
+| `MIMO_API_KEY` | — | MiMo API key |
+| `MIMO_BASE_URL` | — | MiMo API base URL |
+
 ## Architecture
 
 ```
@@ -43,6 +58,13 @@ app/
 │   ├── writer_agent.py         # Report writing agent
 │   ├── mock_agents.py          # MockPlannerAgent
 │   └── planner_agent.py        # LLM Planner (JSON parsing + fallback)
+├── api/                        # REST API routes
+│   ├── runs.py                 # Run CRUD, start, matrix, model-calls
+│   ├── tasks.py                # Task detail, retry
+│   ├── agents.py               # Agent list, detail, update
+│   ├── providers.py            # Provider status, connectivity test
+│   ├── reports.py              # Final report, download
+│   └── tools.py                # Tool listing, tool calls
 ├── orchestration/              # Core execution engine
 │   ├── planner.py              # Task planning (mock/LLM)
 │   ├── executor.py             # Task execution loop
@@ -75,6 +97,10 @@ app/
 | GET | /api/runs/{id}/final-report | Get final report (JSON) |
 | GET | /api/runs/{id}/download-report | Download final report (Markdown) |
 | GET | /api/agents | List all agents |
+| GET | /api/agents/{id} | Get agent detail |
+| PATCH | /api/agents/{id} | Update agent config (provider, model, temperature, tools) |
+| GET | /api/providers | List providers with status |
+| POST | /api/providers/{id}/test | Test provider connectivity |
 | GET | /api/tools | List available tools |
 
 ## Testing

@@ -1,220 +1,172 @@
-# FutureAgent — Composite Visual AI Agent Coordination System
+<p align="center">
+  <h1 align="center">FutureAgent</h1>
+  <p align="center"><b>Composite Visual AI Agent Coordination System</b></p>
+  <p align="center">Visual orchestration for multi-agent, multi-model, multi-tool AI workflows.</p>
+</p>
 
-复合可视化 AI Agent 协调系统：由大语言模型驱动，可定义多个具有专业角色的 Agent，自动把一个复杂目标拆解为有依赖关系的子任务，再按依赖依次执行、审查、重试，并最终汇总为结构化 Markdown 报告。
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" />
+  <img alt="React" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" />
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" />
+  <img alt="TailwindCSS" src="https://img.shields.io/badge/TailwindCSS-3-06B6D4?logo=tailwindcss&logoColor=white" />
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-green" />
+</p>
+
+<p align="center">
+  <a href="https://futureagent-c0ab4cnu.edgeone.cool/">Frontend Demo</a> &nbsp;·&nbsp;
+  <a href="https://agent-coordination-matrix.onrender.com/api/health">Backend API</a> &nbsp;·&nbsp;
+  <a href="docs/deployment.md">Deployment Guide</a> &nbsp;·&nbsp;
+  <a href="docs/architecture.md">Architecture</a>
+</p>
 
 ---
 
-## 1. 系统架构
+FutureAgent 是一个复合可视化 AI Agent 协调系统，可以将复杂目标拆解为任务 DAG，分配给不同 Agent、模型和工具执行，并通过网页矩阵实时展示协作过程、调用记录和最终报告。
+
+FutureAgent is a visual orchestration console for multi-agent, multi-model, and multi-tool AI workflows. Describe a goal in natural language, and the Planner decomposes it into a task DAG. Specialized agents execute tasks through a model router and tool gateway, with every call audited in a live Agent x Task matrix. Download a structured Markdown report when everything completes.
+
+---
+
+## Live Demo
+
+| | URL |
+|---|---|
+| **Frontend** | https://futureagent-c0ab4cnu.edgeone.cool/ |
+| **Backend API** | https://agent-coordination-matrix.onrender.com/api/health |
+| **Swagger UI** | https://agent-coordination-matrix.onrender.com/docs |
+
+> The public demo uses `mock` / `rule` mode by default. No real API keys are exposed.
+
+---
+
+## Highlights
+
+| | Feature | Description |
+|---|---|---|
+| <img src="https://img.shields.io/badge/-Matrix-blueviolet?style=flat-square" /> | **Visual Agent x Task Matrix** | Live colored grid showing every agent-task pair with status, hover details, and running animations |
+| <img src="https://img.shields.io/badge/-DAG-orange?style=flat-square" /> | **Task DAG Execution** | Dependency-aware task graph with status-colored nodes and SVG dependency arrows |
+| <img src="https://img.shields.io/badge/-Router-009688?style=flat-square" /> | **Multi-Model Router** | Route tasks to mock, rule-based, MiMo, or any OpenAI-compatible LLM |
+| <img src="https://img.shields.io/badge/-Tools-FF6F00?style=flat-square" /> | **Tool Gateway** | File I/O, Python execution, HTTP requests, and mock API calls through a unified gateway |
+| <img src="https://img.shields.io/badge/-Audit-4CAF50?style=flat-square" /> | **ToolCall / ModelCall Audit Logs** | Full input/output traces for every tool invocation and model call |
+| <img src="https://img.shields.io/badge/-Settings-9C27B0?style=flat-square" /> | **Agent Settings Panel** | Configure agent type, provider, model, temperature, and tools via slide-in panel |
+| <img src="https://img.shields.io/badge/-Report-2196F3?style=flat-square" /> | **Final Markdown Report** | Auto-synthesized structured report with one-click download |
+| <img src="https://img.shields.io/badge/-DB-336791?style=flat-square" /> | **Supabase PostgreSQL** | Swap SQLite for managed PostgreSQL with a single `DATABASE_URL` change |
+| <img src="https://img.shields.io/badge/-Deploy-FF4081?style=flat-square" /> | **EdgeOne + Render Deployment** | Frontend on Tencent EdgeOne Pages, backend on Render, database on Supabase |
+
+---
+
+## Architecture
 
 ```
-用户输入 Goal
-    ↓
-┌─────────────────────────────────────────────────┐
-│  Planner (mock / LLM)                           │
-│  拆解为 Task DAG（含 dependencies）               │
-└─────────────────────────────────────────────────┘
-    ↓
-┌─────────────────────────────────────────────────┐
-│  Executor                                        │
-│  compute_ready_tasks() → _execute_single_task()  │
-│  ↓                                               │
-│  Agent.execute()                                 │
-│    → Model Router (call_model → ModelCall)       │
-│    → Tool Gateway  (call_tool  → ToolCall)       │
-│  ↓                                               │
-│  CriticAgent.verify (review_result)              │
-│    → success / needs_review / failed             │
-│    → auto-retry (max 2)                          │
-└─────────────────────────────────────────────────┘
-    ↓
-┌─────────────────────────────────────────────────┐
-│  Synthesizer                                     │
-│  collect task summaries → template report        │
-│  → Run.final_report (Markdown)                   │
-└─────────────────────────────────────────────────┘
-    ↓
-┌─────────────────────────────────────────────────┐
-│  Frontend (React 19 + Vite 6)                    │
-│  GoalInput → TaskList → DagView → AgentMatrix    │
-│  → TaskDetailPanel → FinalReport (download)      │
-└─────────────────────────────────────────────────┘
+                         ┌──────────────────────────┐
+                         │        User Goal         │
+                         └────────────┬─────────────┘
+                                      ▼
+                         ┌──────────────────────────┐
+                         │     Planner Agent        │
+                         │  (mock / LLM real)       │
+                         └────────────┬─────────────┘
+                                      ▼
+                         ┌──────────────────────────┐
+                         │       Task DAG           │
+                         │  (dependency graph)      │
+                         └────────────┬─────────────┘
+                                      ▼
+                         ┌──────────────────────────┐
+                         │        Executor          │
+                         │  (topological sort)      │
+                         └────────────┬─────────────┘
+                                      ▼
+                ┌─────────────────────┼─────────────────────┐
+                ▼                     ▼                     ▼
+   ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+   │   Data Agent     │  │   Code Agent     │  │   Writer Agent   │
+   │   Critic Agent   │  │   ...            │  │   ...            │
+   └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘
+            │                     │                     │
+            ▼                     ▼                     ▼
+   ┌─────────────────────────────────────────────────────────────┐
+   │                      Model Router                           │
+   │    mock  ·  rule  ·  mimo  ·  openai_compatible            │
+   └─────────────────────────┬───────────────────────────────────┘
+                             │
+   ┌─────────────────────────┼───────────────────────────────────┐
+   │                   Tool Gateway                              │
+   │  file.read · file.write · python.run · markdown.write       │
+   │  http.request · mock_api.call                               │
+   └─────────────────────────┬───────────────────────────────────┘
+                             ▼
+   ┌─────────────────────────────────────────────────────────────┐
+   │                    Database                                 │
+   │  SQLite (local)  /  Supabase PostgreSQL (production)       │
+   └─────────────────────────┬───────────────────────────────────┘
+                             ▼
+   ┌─────────────────────────────────────────────────────────────┐
+   │                   Frontend UI                               │
+   │  Agent x Task Matrix  ·  DAG View  ·  Task Detail Panel    │
+   │  ToolCall / ModelCall Logs  ·  Final Report Download       │
+   └─────────────────────────────────────────────────────────────┘
 ```
 
-**Run 状态机：**
+**Run State Machine:**
 ```
 pending → planning → executing → synthesizing → completed
                                                  ↘ failed
 ```
 
----
-
-## 2. 技术栈
-
-| 层 | 技术 |
-|---|---|
-| 后端框架 | Python 3.12+, FastAPI 0.115, Uvicorn |
-| ORM / 数据库 | SQLAlchemy 2.0 (async) + aiosqlite (SQLite 本地) / asyncpg (Supabase PostgreSQL 生产) |
-| 校验 | Pydantic v2, pydantic-settings |
-| HTTP 客户端 | httpx |
-| 前端框架 | React 19, Vite 6, TypeScript 5 |
-| 样式 | TailwindCSS 3 |
-| 测试 | pytest + pytest-asyncio |
-| 容器化 | Docker, Docker Compose, Nginx |
+See [docs/architecture.md](docs/architecture.md) for detailed component breakdown.
 
 ---
 
-## 3. 功能清单
+## Screenshots
 
-| 功能 | 状态 |
-|------|------|
-| POST /runs 创建 Run + 触发 Planner | ✅ |
-| Mock Planner（5 个任务模板 + 依赖链） | ✅ |
-| LLM Planner（real 模式，JSON 解析 + fallback） | ✅ |
-| DAG 依赖解析（compute_ready_tasks） | ✅ |
-| Executor 顺序执行（按拓扑层级） | ✅ |
-| 4 个 Agent（data/code/critic/writer） | ✅ |
-| Model Router + 4 Provider（mock/rule/mimo/openai_compatible） | ✅ |
-| Tool Gateway + 6 工具（file.read/write/python.run/markdown.write/http.request/mock_api.call） | ✅ |
-| CriticAgent MVP 审查（success/needs_review/failed） | ✅ |
-| 自动重试（最多 2 次）+ 手动重试 API | ✅ |
-| 报告合成（template Markdown → Run.final_report） | ✅ |
-| 报告下载（GET /download-report） | ✅ |
-| 前端轮询（1s 间隔） | ✅ |
-| Agent×Task 矩阵（状态色块） | ✅ |
-| TaskDetailPanel（ToolCall + ModelCall 详情） | ✅ |
-| DAG 依赖视图（CSS 拓扑布局 + SVG 箭头） | ✅ |
-| FinalReport 展示 + 下载 | ✅ |
-| Docker Compose 一键部署 | ✅ |
-| pytest 单元测试（22 tests） | ✅ |
+<p align="center">
+  <img src="docs/screenshots/agent-matrix.png" width="800" alt="Agent x Task Matrix" />
+  <br/><em>Agent x Task Matrix — live status grid with running animations</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/agent-settings.png" width="800" alt="Agent Settings Panel" />
+  <br/><em>Agent Settings — configure provider, model, temperature, and tools</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/final-report.png" width="800" alt="Final Report" />
+  <br/><em>Final Report — auto-synthesized Markdown with download</em>
+</p>
 
 ---
 
-## 4. 目录结构
+## Quick Start
 
-```
-futureagent/
-├── backend/
-│   ├── app/
-│   │   ├── main.py                    # FastAPI 入口（lifespan 建表 + seed agents）
-│   │   ├── config.py                  # pydantic-settings 配置
-│   │   ├── db.py                      # SQLAlchemy async engine + session
-│   │   ├── models.py                  # ORM：Run, Task, Agent, MatrixCell, ToolCall, ModelCall
-│   │   ├── schemas.py                 # Pydantic 请求/响应 Schema
-│   │   ├── agents/
-│   │   │   ├── base.py                # BaseAgent, AgentResult, ModelContext, ToolContext
-│   │   │   ├── data_agent.py          # 数据 Agent
-│   │   │   ├── code_agent.py          # 代码 Agent
-│   │   │   ├── critic_agent.py        # 审查 Agent
-│   │   │   ├── writer_agent.py        # 报告 Agent
-│   │   │   ├── mock_agents.py         # MockPlannerAgent
-│   │   │   ├── planner_agent.py       # LLM Planner（JSON 解析 + fallback）
-│   │   │   └── registry.py            # Agent 注册表
-│   │   ├── api/
-│   │   │   ├── agents.py              # GET /agents
-│   │   │   ├── runs.py                # POST /runs, GET /runs, GET /runs/{id}
-│   │   │   ├── tasks.py               # GET /tasks/{id}, POST /tasks/{id}/retry
-│   │   │   ├── reports.py             # GET /runs/{id}/final-report, GET /runs/{id}/download-report
-│   │   │   └── tools.py               # GET /tools, GET /runs/{id}/tool-calls
-│   │   ├── orchestration/
-│   │   │   ├── planner.py             # 任务规划（mock / LLM real）
-│   │   │   ├── executor.py            # 任务执行器（执行 + 审查 + 重试）
-│   │   │   ├── dependency.py          # DAG 依赖解析
-│   │   │   └── synthesizer.py         # 报告合成器
-│   │   ├── llm/
-│   │   │   ├── base.py                # BaseProvider, ModelResponse
-│   │   │   ├── router.py              # Model Router（call_model）
-│   │   │   └── providers/             # mock, rule, mimo, openai_compatible
-│   │   └── tools/
-│   │       ├── gateway.py             # Tool Gateway（call_tool）
-│   │       └── (6 built-in tools)
-│   ├── tests/
-│   │   ├── conftest.py
-│   │   ├── test_planner.py
-│   │   ├── test_executor.py
-│   │   ├── test_model_router.py
-│   │   └── test_tool_gateway.py
-│   ├── Dockerfile
-│   ├── pytest.ini
-│   ├── requirements.txt
-│   ├── .env.example
-│   └── README.md
-├── frontend/
-│   ├── src/
-│   │   ├── api/
-│   │   │   ├── client.ts              # API Client（fetch 封装）
-│   │   │   └── types.ts               # TypeScript 类型
-│   │   ├── components/
-│   │   │   ├── GoalInput.tsx           # 目标输入
-│   │   │   ├── TaskList.tsx            # 任务列表
-│   │   │   ├── DagView.tsx             # DAG 依赖视图
-│   │   │   ├── AgentMatrix.tsx         # Agent×Task 矩阵
-│   │   │   ├── MatrixCell.tsx          # 矩阵单元格
-│   │   │   ├── TaskDetailPanel.tsx     # 任务详情面板
-│   │   │   ├── ToolCallList.tsx        # 工具调用列表
-│   │   │   ├── ModelCallList.tsx       # 模型调用列表
-│   │   │   ├── FinalReport.tsx         # 最终报告
-│   │   │   └── StatusBadge.tsx         # 状态色块
-│   │   └── pages/
-│   │       └── RunConsole.tsx          # 主页面
-│   ├── Dockerfile
-│   ├── nginx.conf
-│   ├── package.json
-│   └── README.md
-├── docs/
-│   └── deployment.md              # 生产部署完整指南
-├── docker-compose.yml
-├── .gitignore
-├── README.md                          # ← 你在这里
-└── project_summary.md
+### Prerequisites
+
+- Python 3.12+
+- Node.js 18+
+- (Optional) Docker & Docker Compose
+
+### 1. Clone
+
+```bash
+git clone https://github.com/your-username/futureagent.git
+cd futureagent
 ```
 
----
-
-## 5. 环境变量
-
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `DATABASE_URL` | `sqlite+aiosqlite:///./data/futureagent.db` | 数据库连接串 |
-| `DEBUG` | `true` | 调试模式 |
-| `HOST` | `0.0.0.0` | 监听地址 |
-| `PORT` | `8000` | 监听端口 |
-| `OPENAI_API_KEY` | 空 | OpenAI API Key（real 模式用） |
-| `OPENAI_BASE_URL` | `https://api.openai.com/v1` | OpenAI 兼容 API 地址 |
-| `MIMO_API_KEY` | 空 | MiMo API Key |
-| `MIMO_BASE_URL` | 空 | MiMo API 地址 |
-| `DEFAULT_PROVIDER` | `mock` | 默认 Provider |
-| `DEFAULT_MODEL` | `default` | 默认模型名 |
-| `CORS_ORIGINS` | `["http://localhost:5173",...]` | CORS 允许来源（JSON 数组） |
-
-复制 `backend/.env.example` 为 `backend/.env` 后修改：
+### 2. Backend
 
 ```bash
 cd backend
-cp .env.example .env
-# 编辑 .env，填入你的 API Key
-```
-
----
-
-## 6. 后端启动方法
-
-```bash
-cd backend
+cp .env.example .env          # edit .env if needed
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-启动后自动：
-- 创建数据库表
-- Seed 5 个默认 Agent（planner/data/code/critic/writer）
-
-访问：
 - API: http://localhost:8000
 - Swagger UI: http://localhost:8000/docs
 
----
-
-## 7. 前端启动方法
+### 3. Frontend
 
 ```bash
 cd frontend
@@ -222,226 +174,279 @@ npm install
 npm run dev
 ```
 
-访问 http://localhost:5173
+- UI: http://localhost:5173
 
-Vite 自动代理 `/api` → `http://localhost:8000`
-
----
-
-## 8. Docker 启动方法
+### 4. Docker (all-in-one)
 
 ```bash
-# 一键启动（前后端 + Nginx 反代）
 docker compose up --build -d
-
-# 访问前端
-open http://localhost:3000
-
-# 查看日志
-docker compose logs -f
-
-# 停止
-docker compose down
 ```
 
-Docker Compose 包含两个服务：
-- `backend`: Python 3.12 + FastAPI，端口 8000
-- `frontend`: Nginx + React build，端口 3000，反代 `/api` 到 backend
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
 
-数据库文件持久化在 `backend-data` volume。
+```bash
+docker compose logs -f   # view logs
+docker compose down       # stop
+```
 
 ---
 
-## 9. 生产部署
+## Deployment
 
-### 部署架构
+| Component | Platform | Details |
+|-----------|----------|---------|
+| **Frontend** | Tencent EdgeOne Pages | Vite build → `dist/`, set `VITE_API_BASE_URL` |
+| **Backend** | Render | `pip install -r requirements.txt` + `uvicorn` |
+| **Database** | Supabase PostgreSQL | Free tier, `DATABASE_URL` with `postgresql+asyncpg://` |
 
 ```
-GitHub → EdgeOne Pages (Frontend) → Backend API → Supabase PostgreSQL
+GitHub push → EdgeOne Pages (frontend)
+           → Render (backend) → Supabase PostgreSQL
 ```
 
-- **Frontend**：Tencent EdgeOne Pages（Vite build → dist）
-- **Backend**：Render / Railway / Fly.io / 腾讯云服务器
-- **Database**：Supabase PostgreSQL（managed）
-
-### Supabase 数据库配置
-
-1. 创建 Supabase 项目 → 进入 Dashboard → 点击 **Connect** 获取连接串
-2. 转换为 SQLAlchemy async 格式（将 `postgresql://` 改为 `postgresql+asyncpg://`）
-3. 设置后端环境变量 `DATABASE_URL`
-
-连接方式：
-| 方式 | 端口 | 说明 |
-|------|------|------|
-| Session Pooler | 5432 | **推荐**，asyncpg 兼容性最好 |
-| Transaction Pooler | 6543 | 默认，有 prepared statement 兼容风险 |
-| Direct Connection | 5432 | 无连接池，适合低流量 |
-
-> Supabase Transaction Pooler 与 asyncpg 可能存在 prepared statement 兼容问题，建议优先使用 Session Pooler 或 Direct Connection。
-
-### 后端部署（Render 为例）
-
-| 配置项 | 值 |
-|--------|-----|
-| Root Directory | `backend` |
-| Build Command | `pip install -r requirements.txt` |
-| Start Command | `uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
-| Environment Variables | `DATABASE_URL`, `CORS_ORIGINS`, `DEFAULT_PROVIDER`, API Keys 等 |
-
-### 前端部署（EdgeOne Pages）
-
-| 配置项 | 值 |
-|--------|-----|
-| Root Directory | `frontend` |
-| Build Command | `npm install && npm run build` |
-| Output Directory | `dist` |
-| Environment Variable | `VITE_API_BASE_URL=https://your-backend-domain.com` |
-
-### CORS 配置
-
-后端 `CORS_ORIGINS` 必须包含前端域名：
-```env
-CORS_ORIGINS=["https://your-project.pages.edgeone.com","http://localhost:5173"]
-```
-
-### 验证步骤
-
-1. 打开 EdgeOne Pages URL
-2. 创建 Run → Start 执行
-3. 查看 Matrix、ToolCall/ModelCall、DAG
-4. 下载 Final Report
-
-完整部署文档见 [docs/deployment.md](docs/deployment.md)。
+Full step-by-step guide: **[docs/deployment.md](docs/deployment.md)**
 
 ---
 
-## 10. Demo 使用流程
+## Environment Variables
 
-### 示例 Goal
+### Backend (`backend/.env`)
 
-**数据分析报告**
-> 对最近一个月的销售数据进行分析，生成季度报告
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | No | `sqlite+aiosqlite:///./data/futureagent.db` | Database connection string |
+| `CORS_ORIGINS` | No | `["http://localhost:5173"]` | Allowed CORS origins (JSON array) |
+| `DEFAULT_PROVIDER` | No | `mock` | Default model provider: `mock`, `rule`, `mimo`, `openai_compatible` |
+| `DEFAULT_MODEL` | No | `default` | Default model name |
+| `MIMO_API_KEY` | For MiMo | — | MiMo API key |
+| `MIMO_BASE_URL` | For MiMo | — | MiMo API base URL |
+| `OPENAI_API_KEY` | For OpenAI | — | OpenAI or compatible API key |
+| `OPENAI_BASE_URL` | No | `https://api.openai.com/v1` | OpenAI-compatible base URL |
+| `DEBUG` | No | `true` | Debug mode |
+| `HOST` | No | `0.0.0.0` | Server bind address |
+| `PORT` | No | `8000` | Server port |
 
-**代码任务流程**
-> 编写一个自动化数据清洗脚本，处理CSV文件
+> You can also use `OPENAI_COMPATIBLE_API_KEY` / `OPENAI_COMPATIBLE_BASE_URL` as aliases.
 
-**科研数据处理**
-> 处理实验采集的传感器数据，生成统计分析结果
+### Frontend (`.env` or build-time)
 
-### 操作步骤
-
-1. 打开前端 http://localhost:5173（或 Docker 模式 http://localhost:3000）
-2. 在 Goal 输入框中输入目标，选择 Planner 模式（mock 或 real）
-3. 点击 **Start** 按钮
-4. 观察 **TaskList** 状态变化（pending → running → completed）
-5. 查看 **DAG 依赖视图**，点击节点打开 TaskDetailPanel
-6. 查看 **AgentMatrix** 矩阵色块变化
-7. 所有任务完成后，查看 **FinalReport**，点击下载按钮
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_API_BASE_URL` | In production | `http://localhost:8000` | Backend API base URL |
 
 ---
 
-## 10. 如何配置不同 Agent 使用不同模型
+## Tech Stack
 
-编辑数据库中 `agents` 表，修改对应 Agent 的字段：
+| Layer | Technology |
+|-------|------------|
+| Backend | Python 3.12+, FastAPI, Uvicorn |
+| ORM / DB | SQLAlchemy 2.0 (async) + aiosqlite (local) / asyncpg (Supabase PostgreSQL) |
+| Validation | Pydantic v2, pydantic-settings |
+| HTTP Client | httpx |
+| Frontend | React 19, Vite 6, TypeScript 5 |
+| Styling | TailwindCSS 3 (dark theme, glass morphism, gradients, custom animations) |
+| Model Router | 4 providers: mock, rule, mimo, openai_compatible |
+| Tool Gateway | 6 tools: file.read, file.write, python.run, markdown.write, http.request, mock_api.call |
+| Testing | pytest + pytest-asyncio (22 tests) |
+| Container | Docker, Docker Compose, Nginx reverse proxy |
 
-| 字段 | 说明 | 可选值 |
-|------|------|--------|
-| `agent_type` | Agent 类型 | `mock`, `rule`, `llm` |
-| `model_provider` | 模型提供者 | `mock`, `rule`, `mimo`, `openai_compatible` |
-| `model_name` | 模型名称 | `default`, `gpt-4o`, `qwen2.5-7b-instruct` 等 |
-| `temperature` | 温度 | 0.0 - 1.0 |
+---
 
-示例：让 data_agent 使用真实 LLM
+## Features
 
-```sql
-UPDATE agents
-SET model_provider = 'openai_compatible',
-    model_name = 'gpt-4o-mini',
-    temperature = 0.3
-WHERE name = 'data_agent';
+| Feature | Status |
+|---------|--------|
+| POST /runs — create run + trigger planner | Done |
+| Mock Planner (5 task templates + dependency chain) | Done |
+| LLM Planner (real mode, JSON parsing + fallback) | Done |
+| DAG dependency resolution (compute_ready_tasks) | Done |
+| Executor — sequential execution by topological level | Done |
+| 5 Agents (planner, data, code, critic, writer) | Done |
+| Model Router + 4 Providers | Done |
+| Tool Gateway + 6 built-in tools | Done |
+| CriticAgent MVP review (success / needs_review / failed) | Done |
+| Auto-retry (max 2) + manual retry API | Done |
+| Report synthesis (template Markdown) | Done |
+| Report download (GET /download-report) | Done |
+| Frontend polling (1s interval) | Done |
+| Agent x Task Matrix (status colors + animations) | Done |
+| Task Detail Panel (ToolCall + ModelCall + retry) | Done |
+| DAG dependency view (CSS topology + SVG arrows) | Done |
+| Final Report display + download | Done |
+| Agent Settings Panel (provider, model, tools) | Done |
+| Provider status indicators | Done |
+| Docker Compose one-click deploy | Done |
+| pytest unit tests (22 tests) | Done |
+
+---
+
+## Self-Hosting
+
+FutureAgent is designed to be self-hosted. You can clone this repository and deploy it with your own infrastructure:
+
+1. **Clone** the repository
+2. **Choose your database**: SQLite (zero config) or any PostgreSQL provider (Supabase, Neon, self-hosted)
+3. **Configure API keys** in `backend/.env` — add your OpenAI, MiMo, or any OpenAI-compatible provider keys
+4. **Deploy backend** on any platform that runs Python (Render, Railway, Fly.io, VPS, your own server)
+5. **Deploy frontend** on any static hosting (EdgeOne Pages, Vercel, Cloudflare Pages, Netlify)
+6. **Update `VITE_API_BASE_URL`** to point to your backend domain
+7. **Update `CORS_ORIGINS`** on the backend to include your frontend domain
+
+No registration, no vendor lock-in. Your data stays in your database.
+
+---
+
+## Project Structure
+
+```
+futureagent/
+├── backend/
+│   ├── app/
+│   │   ├── main.py                    # FastAPI entry (lifespan, CORS, routers)
+│   │   ├── config.py                  # Pydantic Settings
+│   │   ├── db.py                      # SQLAlchemy async engine + session
+│   │   ├── models.py                  # ORM: Run, Task, Agent, MatrixCell, ToolCall, ModelCall
+│   │   ├── schemas.py                 # Pydantic request/response schemas
+│   │   ├── agents/
+│   │   │   ├── base.py                # BaseAgent, AgentResult, ModelContext, ToolContext
+│   │   │   ├── registry.py            # Agent registry
+│   │   │   ├── data_agent.py          # Data analysis agent
+│   │   │   ├── code_agent.py          # Code generation agent
+│   │   │   ├── critic_agent.py        # Quality review agent
+│   │   │   ├── writer_agent.py        # Report writing agent
+│   │   │   ├── mock_agents.py         # MockPlannerAgent
+│   │   │   └── planner_agent.py       # LLM Planner (JSON + fallback)
+│   │   ├── api/
+│   │   │   ├── agents.py              # GET /agents, PATCH /agents/{id}
+│   │   │   ├── providers.py           # GET /providers, POST /providers/{id}/test
+│   │   │   ├── runs.py                # CRUD + matrix + model-calls
+│   │   │   ├── tasks.py               # GET /tasks/{id}, POST /tasks/{id}/retry
+│   │   │   ├── reports.py             # Final report + download
+│   │   │   └── tools.py               # Tool listing + tool calls
+│   │   ├── orchestration/
+│   │   │   ├── planner.py             # Task planning (mock / LLM)
+│   │   │   ├── executor.py            # Task execution loop
+│   │   │   ├── dependency.py          # DAG dependency resolver
+│   │   │   └── synthesizer.py         # Final report synthesis
+│   │   ├── llm/
+│   │   │   ├── base.py                # BaseProvider, ModelResponse
+│   │   │   ├── router.py              # Model Router
+│   │   │   └── providers/             # mock, rule, mimo, openai_compatible
+│   │   └── tools/
+│   │       ├── gateway.py             # Tool Gateway
+│   │       └── (6 built-in tools)
+│   ├── tests/                         # 22 pytest tests
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── .env.example
+├── frontend/
+│   ├── src/
+│   │   ├── api/                       # API client + TypeScript types
+│   │   ├── components/
+│   │   │   ├── GoalInput.tsx           # Goal input with demo goals
+│   │   │   ├── TaskList.tsx            # Task list with status badges
+│   │   │   ├── DagView.tsx             # DAG visualization
+│   │   │   ├── AgentMatrix.tsx         # Agent x Task matrix
+│   │   │   ├── MatrixCell.tsx          # Matrix cell (status + animation)
+│   │   │   ├── TaskDetailPanel.tsx     # Task detail panel
+│   │   │   ├── ToolCallList.tsx        # Tool call records
+│   │   │   ├── ModelCallList.tsx       # Model call records
+│   │   │   ├── FinalReport.tsx         # Report display + download
+│   │   │   ├── StatusBadge.tsx         # Status badge component
+│   │   │   ├── AgentSettingsPanel.tsx  # Slide-in agent config panel
+│   │   │   ├── ProviderStatusBadge.tsx # Provider status indicator
+│   │   │   └── ProviderSettingsSummary.tsx  # Provider status summary
+│   │   └── pages/
+│   │       └── RunConsole.tsx          # Main console page
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── package.json
+├── docs/
+│   ├── deployment.md                  # Step-by-step deployment guide
+│   ├── architecture.md                # System architecture details
+│   └── demo.md                        # Demo walkthrough guide
+├── docker-compose.yml
+├── .gitignore
+└── README.md
 ```
 
-或通过 API 启动时选择 `planner_mode=real`（在 GoalInput 组件中切换）。
+---
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/health` | Health check |
+| POST | `/api/runs` | Create run + start execution |
+| GET | `/api/runs` | List all runs |
+| GET | `/api/runs/{id}` | Run detail (tasks, cells, agents, calls) |
+| POST | `/api/runs/{id}/start` | Start run execution |
+| GET | `/api/runs/{id}/tasks` | Run tasks |
+| GET | `/api/runs/{id}/matrix` | Agent-task matrix |
+| GET | `/api/runs/{id}/tool-calls` | Tool call records |
+| GET | `/api/runs/{id}/model-calls` | Model call records |
+| GET | `/api/runs/{id}/final-report` | Final report (JSON) |
+| GET | `/api/runs/{id}/download-report` | Download report (.md) |
+| GET | `/api/tasks/{id}` | Task detail |
+| POST | `/api/tasks/{id}/retry` | Retry failed task |
+| GET | `/api/agents` | List agents |
+| GET | `/api/agents/{id}` | Agent detail |
+| PATCH | `/api/agents/{id}` | Update agent config |
+| GET | `/api/providers` | List providers + status |
+| POST | `/api/providers/{id}/test` | Test provider connectivity |
+| GET | `/api/tools` | List available tools |
 
 ---
 
-## 11. 如何配置 MiMo
+## Roadmap
 
-MiMo 基于 OpenAI-compatible 协议，在 `.env` 中配置：
-
-```env
-MIMO_API_KEY=your-mimo-api-key
-MIMO_BASE_URL=https://api.mimo.example.com/v1
-```
-
-然后在 Agent 配置中设置 `model_provider=mimo`，`model_name=mimo-xxx`。
-
-MiMo Provider 内部使用 httpx 调用 OpenAI-compatible chat completions 接口。
-
----
-
-## 12. 如何配置 OpenAI-compatible API
-
-适用于任何兼容 OpenAI API 格式的服务（如 Azure OpenAI、DeepSeek、Qwen、本地 Ollama 等）：
-
-```env
-OPENAI_API_KEY=your-api-key
-OPENAI_BASE_URL=https://api.deepseek.com/v1
-```
-
-Agent 配置中设置 `model_provider=openai_compatible`，`model_name=deepseek-chat`。
-
-**本地 Ollama 示例：**
-
-```env
-OPENAI_API_KEY=ollama
-OPENAI_BASE_URL=http://localhost:11434/v1
-```
-
-Agent 中 `model_name=llama3`。
+| Priority | Feature | Description |
+|----------|---------|-------------|
+| P0 | SSE / WebSocket | Replace polling with real-time push |
+| P0 | Parallel execution | Run independent tasks concurrently |
+| P1 | LLM-powered Critic | Deep quality review via LLM |
+| P1 | React Flow DAG | Interactive dependency graph editing |
+| P2 | Multi-run dashboard | Browse and compare past runs |
+| P2 | User authentication | JWT + RBAC |
+| P2 | Agent sandbox | Docker-in-Docker for python.run |
+| P2 | BYOK (Bring Your Own Key) | User-supplied API keys per session |
+| P3 | Benchmark mode | Automated evaluation workflows |
+| P3 | Scientific workflow templates | Pre-built templates for research pipelines |
+| P3 | Webhook / callbacks | Notify external systems on task completion |
 
 ---
 
-## 13. 当前限制
-
-- **BackgroundTasks 执行**：FastAPI BackgroundTasks 在进程内执行，重启会丢失；可后续换 Celery/RQ
-- **CriticAgent 为规则模式**：MVP 审查仅检查字段完整性，未接入 LLM 深度审查
-- **无用户认证**：所有 API 无鉴权，适合内网/本地使用
-- **前端轮询**：1s 轮询代替 WebSocket/SSE，简单但不够实时
-- **Tool 执行无沙箱**：python.run 直接执行代码，仅依赖超时限制
-- **Agent 配置在数据库**：无管理界面，需直接操作数据库修改
-- **无并发执行**：任务严格按拓扑顺序串行，无并行执行同一层级的多个任务
-
----
-
-## 15. 后续路线
-
-| 优先级 | 功能 | 说明 |
-|--------|------|------|
-| P0 | PostgreSQL 支持 | ✅ 已完成，DATABASE_URL 切换即生效 |
-| P0 | WebSocket/SSE 实时推送 | 替代前端轮询 |
-| P1 | Agent 管理界面 | 前端可视化编辑 Agent 配置 |
-| P1 | 并行任务执行 | 同一层级的无依赖任务可并行 |
-| P1 | LLM 审查模式 | CriticAgent 接入 LLM 做深度质量审查 |
-| P2 | React Flow DAG | 替代简单 SVG，支持交互式编辑依赖 |
-| P2 | 多 Run 管理 | Dashboard 列出所有 Run 历史 |
-| P2 | 用户认证 | JWT + RBAC |
-| P3 | Agent 沙箱执行 | Docker-in-Docker 沙箱执行 python.run |
-| P3 | 任务回调/Webhook | 任务完成时通知外部系统 |
-
----
-
-## 运行测试
+## Testing
 
 ```bash
 cd backend
 python -m pytest tests/ -v
 ```
 
-22 个测试覆盖：Planner（4）+ Executor（5）+ ModelRouter（5）+ ToolGateway（8）
+22 tests covering: Planner (4) + Executor (5) + ModelRouter (5) + ToolGateway (8)
+
+Tests use in-memory SQLite. No external services required.
+
+---
+
+## Security Notice
+
+- **Never commit `.env` files.** The `.gitignore` is configured to exclude them.
+- **API keys must only be configured on the backend.** Never expose keys in frontend code or client-side environment variables.
+- **Public demos should use `mock` / `rule` mode** by default to avoid consuming real API credits.
+- **CORS must be restricted** to known frontend domains in production.
+- **Tool execution (`python.run`) has no sandbox.** Use with caution in untrusted environments.
 
 ---
 
 ## License
 
 MIT
+
+---
+
+<p align="center">
+  Built with FastAPI + React + TailwindCSS
+</p>

@@ -45,4 +45,13 @@ export const api = {
   getFinalReport: (runId: string) =>
     request<import("./types").FinalReport>(`/runs/${runId}/final-report`),
   getDownloadReportUrl: (runId: string) => `${BASE}/runs/${runId}/download-report`,
+  listProviders: () =>
+    request<import("./types").ProviderStatus[]>("/providers"),
+  testProvider: (providerId: string) =>
+    request<import("./types").ProviderTestResult>(`/providers/${providerId}/test`, { method: "POST" }),
+  updateAgent: (agentId: string, body: Record<string, unknown>) =>
+    request<import("./types").Agent>(`/agents/${agentId}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
 }

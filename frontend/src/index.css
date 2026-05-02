@@ -108,8 +108,45 @@
     @apply glass p-4 text-center animate-slide-up;
   }
 
+  .stat-card-enhanced {
+    @apply glass p-4 text-center animate-slide-up relative overflow-hidden;
+  }
+  .stat-card-enhanced::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.08), transparent 70%);
+  }
+  .stat-card-enhanced:hover::before {
+    @apply opacity-100;
+  }
+
   .grid-matrix {
     @apply glass overflow-hidden;
+  }
+
+  .grid-matrix table td button {
+    @apply relative;
+  }
+  .grid-matrix table td button.running-cell {
+    @apply animate-running-pulse;
+  }
+
+  .highlight-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
+      border backdrop-blur-sm transition-all duration-300;
+  }
+
+  .section-panel {
+    @apply glass p-5 animate-slide-up relative overflow-hidden;
+  }
+  .section-panel::after {
+    content: '';
+    @apply absolute top-0 left-0 right-0 h-px;
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3), transparent);
+  }
+
+  .hero-orb {
+    @apply absolute rounded-full blur-3xl pointer-events-none;
   }
 
   .panel-overlay {
